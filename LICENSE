@@ -1,0 +1,53 @@
+MIT License
+
+Copyright (c) 2026 Typemon contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+===============================================================================
+LICENSE BOUNDARY — assets/ccbysa/**
+===============================================================================
+
+This MIT license covers all ORIGINAL Typemon code and assets in this
+repository, with one carve-out:
+
+  assets/ccbysa/**  is NOT MIT-licensed.
+
+The assets/ccbysa/** directory is a separate, third-party asset island. It is
+distributed under Creative Commons Attribution-ShareAlike 4.0 International
+(CC BY-SA 4.0). Its full license text is at assets/ccbysa/LICENSE and its
+per-file attribution ledger is at assets/ccbysa/ATTRIBUTION.md.
+
+  - Source:  OpMonTeam/OpMon-Data — https://github.com/OpMonTeam/OpMon-Data
+  - Author:  OpMon Team contributors
+  - License: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0/
+
+Two consequences of that boundary:
+
+  1. Any adaptation, remix, or redistribution of material under
+     assets/ccbysa/** MUST remain under CC BY-SA 4.0 (share-alike), and MUST
+     retain the attribution in assets/ccbysa/ATTRIBUTION.md.
+
+  2. Original Typemon code and assets never depend on the assets/ccbysa/**
+     namespace: the build asserts that no original/paid monster definition
+     references that island. The MIT layer therefore stands alone as MIT.
+
+One in-island exception: assets/ccbysa/audio/8bit-battle.ogg is CC0-1.0
+(public-domain dedication, credit Ted Kerr / Wolfgang_), not CC BY-SA. See the
+audio ledger at the end of assets/ccbysa/ATTRIBUTION.md.

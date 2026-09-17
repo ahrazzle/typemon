@@ -1,0 +1,1961 @@
+{
+  "schema": "typemon.pose.v1",
+  "generated": "master@2026-08-28",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "OpMon Team contributors (github.com/OpMonTeam/OpMon-Data)",
+  "count": 71,
+  "poses": {
+    "type-BAD": {
+      "id": "type-BAD",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/BAD.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-BUG": {
+      "id": "type-BUG",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/BUG.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-BURNING": {
+      "id": "type-BURNING",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/BURNING.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-COLD": {
+      "id": "type-COLD",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/COLD.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-DRAGON": {
+      "id": "type-DRAGON",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/DRAGON.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-ELECTRON": {
+      "id": "type-ELECTRON",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/ELECTRON.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-FIGHT": {
+      "id": "type-FIGHT",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/FIGHT.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-GHOST": {
+      "id": "type-GHOST",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/GHOST.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-GROUND": {
+      "id": "type-GROUND",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/GROUND.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-LIQUID": {
+      "id": "type-LIQUID",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/LIQUID.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-MAGIC": {
+      "id": "type-MAGIC",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/MAGIC.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-MENTAL": {
+      "id": "type-MENTAL",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/MENTAL.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-METAL": {
+      "id": "type-METAL",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/METAL.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-MINERAL": {
+      "id": "type-MINERAL",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/MINERAL.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-NEUTRAL": {
+      "id": "type-NEUTRAL",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/NEUTRAL.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-SKY": {
+      "id": "type-SKY",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/SKY.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-TOXIC": {
+      "id": "type-TOXIC",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/TOXIC.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "type-VEGETAL": {
+      "id": "type-VEGETAL",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "types/VEGETAL.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          50,
+          20
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 2.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-1": {
+      "id": "opmon-1",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/1-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/1-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/1-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/1-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          30,
+          31,
+          67,
+          79
+        ],
+        "density": 0.506,
+        "areaPct": 17.8,
+        "aspect": 0.77,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-10": {
+      "id": "opmon-10",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/10-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/10-1.png"
+        },
+        {
+          "frame": "1_alt",
+          "path": "anims/10-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/10-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/10-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          29,
+          48,
+          69,
+          84
+        ],
+        "density": 0.356,
+        "areaPct": 14.4,
+        "aspect": 1.11,
+        "scaleHint": 2.6,
+        "flags": [
+          "tiny"
+        ]
+      }
+    },
+    "opmon-11": {
+      "id": "opmon-11",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/11-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/11-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          12,
+          35,
+          82,
+          88
+        ],
+        "density": 0.616,
+        "areaPct": 37.1,
+        "aspect": 1.32,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-12": {
+      "id": "opmon-12",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/12-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          5,
+          19,
+          84,
+          95
+        ],
+        "density": 0.713,
+        "areaPct": 60.0,
+        "aspect": 1.04,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-13": {
+      "id": "opmon-13",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/13-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/13-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          25,
+          26,
+          67,
+          75
+        ],
+        "density": 0.618,
+        "areaPct": 20.6,
+        "aspect": 0.86,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-15": {
+      "id": "opmon-15",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/15-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/15-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/15-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/15-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          32,
+          69,
+          70,
+          99
+        ],
+        "density": 0.504,
+        "areaPct": 11.4,
+        "aspect": 1.27,
+        "scaleHint": 2.6,
+        "flags": [
+          "tiny"
+        ]
+      }
+    },
+    "opmon-18": {
+      "id": "opmon-18",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/18-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/18-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/18-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/18-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          24,
+          4,
+          81,
+          76
+        ],
+        "density": 0.315,
+        "areaPct": 41.0,
+        "aspect": 0.79,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-19": {
+      "id": "opmon-19",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/19-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          3,
+          0,
+          96,
+          99
+        ],
+        "density": 0.556,
+        "areaPct": 92.1,
+        "aspect": 0.94,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-2": {
+      "id": "opmon-2",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/2-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/2-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/2-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/2-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          100,
+          100
+        ],
+        "density": 0.197,
+        "areaPct": 100.0,
+        "aspect": 1.0,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-20": {
+      "id": "opmon-20",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/20-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/20-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/20-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/20-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          30,
+          55,
+          64,
+          95
+        ],
+        "density": 0.44,
+        "areaPct": 13.6,
+        "aspect": 0.85,
+        "scaleHint": 2.6,
+        "flags": [
+          "tiny"
+        ]
+      }
+    },
+    "opmon-21": {
+      "id": "opmon-21",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/21-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/21-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/21-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/21-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          2,
+          11,
+          81,
+          96
+        ],
+        "density": 0.679,
+        "areaPct": 67.2,
+        "aspect": 0.93,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-22": {
+      "id": "opmon-22",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/22-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/22-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          19,
+          36,
+          82,
+          86
+        ],
+        "density": 0.368,
+        "areaPct": 31.5,
+        "aspect": 1.26,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-25": {
+      "id": "opmon-25",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/25-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/25-1.png"
+        },
+        {
+          "frame": "1_wink1",
+          "path": "anims/25-1_wink1.png"
+        },
+        {
+          "frame": "1_wink2",
+          "path": "anims/25-1_wink2.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          1,
+          45,
+          85,
+          96
+        ],
+        "density": 0.502,
+        "areaPct": 42.8,
+        "aspect": 1.65,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-26": {
+      "id": "opmon-26",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/26-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/26-1.png"
+        },
+        {
+          "frame": "1_1",
+          "path": "anims/26-1_1.png"
+        },
+        {
+          "frame": "1_2",
+          "path": "anims/26-1_2.png"
+        },
+        {
+          "frame": "1_3",
+          "path": "anims/26-1_3.png"
+        },
+        {
+          "frame": "1_4",
+          "path": "anims/26-1_4.png"
+        },
+        {
+          "frame": "1_5",
+          "path": "anims/26-1_5.png"
+        },
+        {
+          "frame": "1_6",
+          "path": "anims/26-1_6.png"
+        },
+        {
+          "frame": "1_7",
+          "path": "anims/26-1_7.png"
+        },
+        {
+          "frame": "1_8",
+          "path": "anims/26-1_8.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          2,
+          100,
+          100
+        ],
+        "density": 0.344,
+        "areaPct": 98.0,
+        "aspect": 1.02,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-27": {
+      "id": "opmon-27",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/27-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          25,
+          100,
+          100
+        ],
+        "density": 0.648,
+        "areaPct": 75.0,
+        "aspect": 1.33,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-28": {
+      "id": "opmon-28",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/28-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/28-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          3,
+          64,
+          93
+        ],
+        "density": 0.111,
+        "areaPct": 57.6,
+        "aspect": 0.71,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-3": {
+      "id": "opmon-3",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/3-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/3-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          3,
+          0,
+          100,
+          92
+        ],
+        "density": 0.422,
+        "areaPct": 89.2,
+        "aspect": 1.05,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-30": {
+      "id": "opmon-30",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/30-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          10,
+          0,
+          100,
+          99
+        ],
+        "density": 0.12,
+        "areaPct": 89.1,
+        "aspect": 0.91,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-32": {
+      "id": "opmon-32",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/32-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/32-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          1,
+          13,
+          89,
+          100
+        ],
+        "density": 0.506,
+        "areaPct": 76.6,
+        "aspect": 1.01,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-34": {
+      "id": "opmon-34",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/34-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/34-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          32,
+          35,
+          68,
+          73
+        ],
+        "density": 0.526,
+        "areaPct": 13.7,
+        "aspect": 0.95,
+        "scaleHint": 2.6,
+        "flags": [
+          "tiny"
+        ]
+      }
+    },
+    "opmon-35": {
+      "id": "opmon-35",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/35-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/35-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          27,
+          26,
+          62,
+          90
+        ],
+        "density": 0.576,
+        "areaPct": 22.4,
+        "aspect": 0.55,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-36": {
+      "id": "opmon-36",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/36-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/36-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          10,
+          42,
+          88,
+          97
+        ],
+        "density": 0.16,
+        "areaPct": 42.9,
+        "aspect": 1.42,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-37": {
+      "id": "opmon-37",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/37-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          10,
+          3,
+          97,
+          97
+        ],
+        "density": 0.497,
+        "areaPct": 81.8,
+        "aspect": 0.93,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-38": {
+      "id": "opmon-38",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/38-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          37,
+          66,
+          68,
+          95
+        ],
+        "density": 0.443,
+        "areaPct": 9.0,
+        "aspect": 1.07,
+        "scaleHint": 2.6,
+        "flags": [
+          "tiny"
+        ]
+      }
+    },
+    "opmon-4": {
+      "id": "opmon-4",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/4-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/4-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          15,
+          0,
+          77,
+          75
+        ],
+        "density": 0.349,
+        "areaPct": 46.5,
+        "aspect": 0.83,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-41": {
+      "id": "opmon-41",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/41-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          39,
+          40,
+          75,
+          87
+        ],
+        "density": 0.725,
+        "areaPct": 16.9,
+        "aspect": 0.77,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-44": {
+      "id": "opmon-44",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/44-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          16,
+          36,
+          73,
+          74
+        ],
+        "density": 0.301,
+        "areaPct": 21.7,
+        "aspect": 1.5,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-45": {
+      "id": "opmon-45",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/45-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          17,
+          28,
+          75,
+          90
+        ],
+        "density": 0.405,
+        "areaPct": 36.0,
+        "aspect": 0.94,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-47": {
+      "id": "opmon-47",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/47-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/47-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          6,
+          86,
+          91
+        ],
+        "density": 0.163,
+        "areaPct": 73.1,
+        "aspect": 1.01,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-48": {
+      "id": "opmon-48",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/48-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          27,
+          17,
+          74,
+          93
+        ],
+        "density": 0.71,
+        "areaPct": 35.7,
+        "aspect": 0.62,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-49": {
+      "id": "opmon-49",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/49-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          29,
+          27,
+          78,
+          85
+        ],
+        "density": 0.601,
+        "areaPct": 28.4,
+        "aspect": 0.84,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-5": {
+      "id": "opmon-5",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/5-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/5-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          32,
+          18,
+          70,
+          75
+        ],
+        "density": 0.7,
+        "areaPct": 21.7,
+        "aspect": 0.67,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-50": {
+      "id": "opmon-50",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/50-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          17,
+          3,
+          91,
+          99
+        ],
+        "density": 0.495,
+        "areaPct": 71.0,
+        "aspect": 0.77,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-51": {
+      "id": "opmon-51",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/51-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/51-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          17,
+          25,
+          81,
+          85
+        ],
+        "density": 0.435,
+        "areaPct": 38.4,
+        "aspect": 1.07,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-52": {
+      "id": "opmon-52",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/52-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          19,
+          14,
+          78,
+          88
+        ],
+        "density": 0.402,
+        "areaPct": 43.7,
+        "aspect": 0.8,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-53": {
+      "id": "opmon-53",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/53-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/53-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          21,
+          23,
+          80,
+          99
+        ],
+        "density": 0.349,
+        "areaPct": 44.8,
+        "aspect": 0.78,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-55": {
+      "id": "opmon-55",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/55-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/55-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          22,
+          37,
+          72,
+          71
+        ],
+        "density": 0.478,
+        "areaPct": 17.0,
+        "aspect": 1.47,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-56": {
+      "id": "opmon-56",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/56-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/56-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          10,
+          1,
+          88,
+          95
+        ],
+        "density": 0.611,
+        "areaPct": 73.3,
+        "aspect": 0.83,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-57": {
+      "id": "opmon-57",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/57-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          4,
+          1,
+          96,
+          100
+        ],
+        "density": 0.591,
+        "areaPct": 91.1,
+        "aspect": 0.93,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-6": {
+      "id": "opmon-6",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/6-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/6-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          3,
+          0,
+          100,
+          98
+        ],
+        "density": 0.766,
+        "areaPct": 95.1,
+        "aspect": 0.99,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-60": {
+      "id": "opmon-60",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/60-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          27,
+          36,
+          88,
+          92
+        ],
+        "density": 0.516,
+        "areaPct": 34.2,
+        "aspect": 1.09,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-61": {
+      "id": "opmon-61",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/61-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          27,
+          11,
+          70,
+          93
+        ],
+        "density": 0.506,
+        "areaPct": 35.3,
+        "aspect": 0.52,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-7": {
+      "id": "opmon-7",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/7-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/7-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          37,
+          40,
+          65,
+          79
+        ],
+        "density": 0.574,
+        "areaPct": 10.9,
+        "aspect": 0.72,
+        "scaleHint": 2.6,
+        "flags": [
+          "tiny"
+        ]
+      }
+    },
+    "opmon-8": {
+      "id": "opmon-8",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/8-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/8-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          12,
+          77,
+          98
+        ],
+        "density": 0.426,
+        "areaPct": 66.2,
+        "aspect": 0.9,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-9": {
+      "id": "opmon-9",
+      "frames": [
+        {
+          "frame": 1,
+          "path": "opmons/9-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          5,
+          19,
+          92,
+          98
+        ],
+        "density": 0.525,
+        "areaPct": 68.7,
+        "aspect": 1.1,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-s10": {
+      "id": "opmon-s10",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/s10-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/s10-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          100,
+          100
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 1.0,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-s11": {
+      "id": "opmon-s11",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/s11-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/s11-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          28,
+          11,
+          73,
+          54
+        ],
+        "density": 0.717,
+        "areaPct": 19.4,
+        "aspect": 1.05,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-s12": {
+      "id": "opmon-s12",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/s12-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/s12-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          14,
+          6,
+          83,
+          91
+        ],
+        "density": 0.225,
+        "areaPct": 58.7,
+        "aspect": 0.81,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-ss10": {
+      "id": "opmon-ss10",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/ss10-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/ss10-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          39,
+          24,
+          78,
+          97
+        ],
+        "density": 0.537,
+        "areaPct": 28.5,
+        "aspect": 0.53,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-ss11": {
+      "id": "opmon-ss11",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/ss11-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/ss11-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          27,
+          11,
+          72,
+          54
+        ],
+        "density": 0.7,
+        "areaPct": 19.4,
+        "aspect": 1.05,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "opmon-ss12": {
+      "id": "opmon-ss12",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "opmons/ss12-0.png"
+        },
+        {
+          "frame": 1,
+          "path": "opmons/ss12-1.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          7,
+          4,
+          93,
+          91
+        ],
+        "density": 0.4,
+        "areaPct": 74.8,
+        "aspect": 0.99,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "bkg-background_cave": {
+      "id": "bkg-background_cave",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "battle_bkg/background_cave.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          512,
+          512
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 1.0,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    },
+    "bkg-background_grass": {
+      "id": "bkg-background_grass",
+      "frames": [
+        {
+          "frame": 0,
+          "path": "battle_bkg/background_grass.png"
+        }
+      ],
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data",
+      "geometry": {
+        "bbox": [
+          0,
+          0,
+          512,
+          512
+        ],
+        "density": 1.0,
+        "areaPct": 100.0,
+        "aspect": 1.0,
+        "scaleHint": 1.0,
+        "flags": []
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "typemon.track.v1",
+  "generated": "master@2026-08-28",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "OpMon Team contributors (github.com/OpMonTeam/OpMon-Data)",
+  "note": "Judge beat-grid derives from this manifest, never the decoded audio. vet=pending-ears = exclude on doubt until human ear pass. As of 2026-08-28 ear-pass: all tracks EXCLUDE-PROVENANCE. Dev/test only, never shipped.",
+  "count": 4,
+  "tracks": {
+    "mysterioucity.ogg": {
+      "file": "mysterioucity.ogg",
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data/Audio/music",
+      "attribution": "OpMon Team contributors (github.com/OpMonTeam/OpMon-Data)",
+      "durationMs": 88613.15,
+      "declaredS": 88.6131,
+      "bpm": 90,
+      "beatMs": 666.67,
+      "beatsTotal": 132.9,
+      "vet": "exclude-provenance",
+      "tempoVerified": false,
+      "sha1": "24e37b16858d",
+      "ship": false,
+      "excludeReason": "CC-BY-SA attribution unfillable (no composer credit survived repo history); IP-remix risk undetectable. Files dev/test only."
+    },
+    "route14.ogg": {
+      "file": "route14.ogg",
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data/Audio/music",
+      "attribution": "OpMon Team contributors (github.com/OpMonTeam/OpMon-Data)",
+      "durationMs": 80600.7,
+      "declaredS": 80.6007,
+      "bpm": 110,
+      "beatMs": 545.45,
+      "beatsTotal": 147.8,
+      "vet": "exclude-provenance",
+      "tempoVerified": false,
+      "sha1": "06d0e0ad41ef",
+      "ship": false,
+      "excludeReason": "CC-BY-SA attribution unfillable (no composer credit survived repo history); IP-remix risk undetectable. Files dev/test only."
+    },
+    "wildbattle.ogg": {
+      "file": "wildbattle.ogg",
+      "license": "CC-BY-SA-4.0",
+      "source": "OpMonTeam/OpMon-Data/Audio/music",
+      "attribution": "OpMon Team contributors (github.com/OpMonTeam/OpMon-Data)",
+      "durationMs": 99623.76,
+      "declaredS": 99.6238,
+      "bpm": 100,
+      "beatMs": 600.0,
+      "beatsTotal": 166.0,
+      "vet": "exclude-provenance",
+      "tempoVerified": false,
+      "sha1": "4ece5028dd66",
+      "ship": false,
+      "excludeReason": "CC-BY-SA attribution unfillable (no composer credit survived repo history); IP-remix risk undetectable. Files dev/test only."
+    },
+    "8bit-battle.ogg": {
+      "file": "8bit-battle.ogg",
+      "license": "CC0-1.0",
+      "source": "OpenGameArt \u2014 https://opengameart.org/content/8-bit-rpg-battleencounter-theme",
+      "attribution": "Ted Kerr (Wolfgang_) \u2014 CC0, OGA page item #43483",
+      "durationMs": 65291.0,
+      "declaredS": 65.291,
+      "bpm": 120,
+      "beatMs": 500.0,
+      "beatsTotal": 130.6,
+      "vet": "measured",
+      "tempoVerified": true,
+      "ship": true,
+      "sha1": "cb036608e1c9"
+    }
+  }
+}

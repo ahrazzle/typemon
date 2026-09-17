@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Typemon — Playable Battle Demo</title>
+<style>
+  :root{
+    --navy:#1a1a2e; --slate:#16213e; --cobalt:#0f3460; --coral:#e94560;
+    --gold:#ffd166; --teal:#06d6a0; --bg:#0b0e1a; --card:#141a33; --line:#2a3560;
+    --text:#eef1ff; --dim:#9aa6d0;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{background:var(--bg); color:var(--text); font-family:Inter,-apple-system,'Segoe UI',sans-serif; overflow:hidden;}
+  /* ---------- START SCREEN (gesture gate = first feel moment) ---------- */
+  #startScreen{
+    position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:22px;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, rgba(233,69,96,.25), transparent 60%),
+      radial-gradient(900px 500px at 15% 110%, rgba(0,230,255,.14), transparent 55%),
+      var(--bg);
+  }
+  #startScreen h1{
+    font-size:clamp(48px,9vw,92px); font-weight:900; letter-spacing:-2px;
+    background:linear-gradient(90deg,#fff 10%, var(--coral) 55%, var(--gold) 90%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 60px rgba(233,69,96,.25);
+  }
+  #startScreen .tag{color:var(--dim); font-size:15px; letter-spacing:3px; text-transform:uppercase; font-weight:600;}
+  #startBtn{
+    margin-top:10px; background:linear-gradient(135deg,var(--coral),#ff7a5c);
+    color:#fff; border:none; border-radius:16px; padding:18px 52px; cursor:pointer;
+    font-size:22px; font-weight:800; letter-spacing:.5px; box-shadow:0 8px 32px rgba(233,69,96,.45);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  #continueBtn{
+    margin-top:10px; background:transparent; color:var(--gold);
+    border:2px solid var(--gold); border-radius:16px; padding:16px 40px; cursor:pointer;
+    font-size:22px; font-weight:800; letter-spacing:.5px;
+  }
+  #startBtn:hover{transform:translateY(-2px) scale(1.03); box-shadow:0 12px 44px rgba(233,69,96,.6);}
+  #startBtn:active{transform:scale(.97);}
+  #startScreen .hint{color:var(--dim); font-size:13px; max-width:420px; text-align:center; line-height:1.6;}
+  #startScreen .hint b{color:var(--gold);}
+  /* ---------- BATTLE LAYOUT ---------- */
+  #battleRoot{position:fixed; inset:0; display:none;}
+  #battleRoot.on{display:block;}
+  #battleCanvas{position:absolute; inset:0; width:100%; height:100%; z-index:10;}
+  /* battle layout: keyboard top, HP below it, counter pinned bottom */
+  #typejoyWrap{position:absolute; left:50%; top:0; transform:translateX(-50%); z-index:20; width:min(92vw,760px); height:100vh;}
+  /* Keyboard placement is resolved at runtime (see alignKeyboardToTop below):
+     the framework keyboardContainer is bottom:0;height:55% of the wrap, so we
+     shift the wrap so the keyboard's top edge lands exactly at viewport top —
+     framework keeps full animation ownership, no internal overrides. */
+  /* HP bars in the lower area, above the counter */
+  #hud{position:absolute; left:50%; bottom:120px; transform:translateX(-50%); z-index:30;
+       display:flex; gap:14px; align-items:center; background:rgba(20,26,51,.85);
+       border:1px solid var(--line); border-radius:14px; padding:8px 18px; font-size:13px;
+       backdrop-filter:blur(6px);}
+  #hud .mon{display:flex; align-items:center; gap:8px;}
+  #hud .mon img{width:34px; height:34px; image-rendering:pixelated;}
+  #hud .mon b{color:var(--gold);}
+  #hud .hpwrap{width:120px; height:10px; background:#1d2745; border-radius:6px; overflow:hidden;}
+  #hud .hpfill{height:100%; width:100%; background:linear-gradient(90deg,var(--teal),#8ef7d5); transition:width .25s ease;}
+  #hud .hpfill.low{background:linear-gradient(90deg,var(--coral),#ff9b85);}
+  /* floating combat messages */
+  #combo{position:absolute; left:50%; bottom:200px; transform:translateX(-50%); z-index:30;
+         font-size:clamp(20px,4vw,34px); font-weight:900; color:var(--gold);
+         text-shadow:0 0 24px rgba(255,209,102,.5); letter-spacing:1px; opacity:0; transition:opacity .2s;}
+  /* judgment counter: pinned to the very bottom */
+  #counter{position:absolute; left:50%; bottom:10px; transform:translateX(-50%); z-index:30;
+           display:flex; gap:22px; background:rgba(20,26,51,.8); border:1px solid var(--line);
+           border-radius:10px; padding:6px 18px; font-size:12px; color:var(--dim); backdrop-filter:blur(4px);}
+  /* letter feed: judge-cursor character row (Typejoy "Type This" pattern).
+     Bottom strip between HP bars (bottom:120px) and counter (bottom:10px). One
+     chip per note of the in-flight word, indexed to the judge cursor: chip < cursor
+     = typed (dim), chip === cursor = CURRENT expected key (hot), > cursor = upcoming.
+     Position + sizing are ours; the LETTERS come live from session.judge each frame,
+     so the feed tracks the same cursor/keyboard source (no time-scroll drift). */
+  #keyFeed{position:absolute; left:50%; bottom:58px; transform:translateX(-50%); z-index:30;
+           display:flex; gap:10px; align-items:center; padding:8px 14px; max-width:min(92vw,640px);
+           flex-wrap:nowrap; background:rgba(20,26,51,.85); border:1px solid var(--line);
+           border-radius:12px; backdrop-filter:blur(4px);}
+  #keyFeedInner{display:flex; gap:8px; align-items:center;}
+  #keyFeed .feedKey{width:40px; height:40px; line-height:40px; flex:0 0 auto;
+           text-align:center; font-size:20px; font-weight:900; color:#fff; border-radius:8px;
+           background:linear-gradient(135deg,#22305a,#16213e); border:1px solid rgba(255,255,255,.18);
+           opacity:.45; transition:opacity .12s ease, transform .12s ease,
+           box-shadow .12s ease, background .12s ease;}
+  #keyFeed .feedKey.done{opacity:.2;}
+  #keyFeed .feedKey.current{opacity:1; transform:scale(1.16);
+           background:linear-gradient(135deg,#ffd166,#e94560); border-color:#ffd166;
+           box-shadow:0 0 16px rgba(255,209,102,.75);}
+  #counter .cnt b{font-weight:900; font-size:14px;}
+  #counter .cnt.ok b{color:var(--teal);}
+  #counter .cnt.good b{color:var(--gold);}
+  #counter .cnt.mid b{color:#7fb3ff;}
+  #counter .cnt.bad b{color:var(--coral);}
+  /* attack menu (menu gate). Positioned by JS above the HUD (see openMenu) so it
+     can NEVER overlap the HP/name bar; this bottom is a fallback only. */
+  #menuBar{position:absolute; left:50%; bottom:200px; transform:translateX(-50%); z-index:40;
+           display:none; gap:10px;}
+  #menuBar.on{display:flex;}
+  .menuKey{background:var(--card); border:2px solid var(--line); border-radius:12px; padding:10px 22px;
+           font-size:16px; font-weight:700; color:var(--text); cursor:pointer; transition:border-color .12s, transform .12s;}
+  .menuKey:hover{border-color:var(--coral); transform:translateY(-2px);}
+  .menuKey .k{color:var(--coral); font-weight:900; margin-right:8px;}
+  /* resolve overlay */
+  #resolve{position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+           flex-direction:column; gap:18px; background:rgba(11,14,26,.88); backdrop-filter:blur(8px); text-align:center;}
+  #resolve.on{display:flex;}
+  #resolve h2{font-size:clamp(34px,6vw,58px); font-weight:900; letter-spacing:-1px;}
+  #resolve .sub{color:var(--dim); font-size:16px; max-width:520px; line-height:1.6;}
+  #resolve .monster{width:120px; height:120px; image-rendering:pixelated; filter:drop-shadow(0 0 30px rgba(233,69,96,.4));}
+  #againBtn{margin-top:8px; background:linear-gradient(135deg,var(--coral),#ff7a5c); color:#fff; border:none;
+            border-radius:14px; padding:14px 40px; font-size:18px; font-weight:800; cursor:pointer;}
+  .hidden{display:none!important;}
+  /* ---------- OVERWORLD LAYER (MVP: walkable 2D map, starter, party) ---------- */
+  #starterRoot{position:fixed; inset:0; z-index:50; display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; background:var(--bg);}
+  #starterRoot.on{display:flex;}
+  #starterRoot h2{font-size:clamp(28px,5vw,44px); font-weight:900;}
+  #starterCards{display:flex; gap:14px; flex-wrap:wrap; justify-content:center;}
+  .starterCard{background:var(--card); border:2px solid var(--line); border-radius:14px;
+    padding:16px 20px; width:170px; text-align:center; cursor:pointer;}
+  .starterCard:hover{border-color:var(--coral);}
+  .starterCard img{width:96px; height:96px; image-rendering:pixelated;}
+  .starterCard b{color:var(--gold); display:block; margin:6px 0 2px;}
+  .starterCard small{color:var(--dim); display:block; line-height:1.5;}
+  #worldRoot{position:fixed; inset:0; z-index:40; display:none; background:var(--bg);}
+  #worldRoot.on{display:block;}
+  /* the map fills the viewport; the HUD floats over it */
+  #worldCanvas{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;}
+  #worldHud{position:absolute; inset:0; z-index:5; pointer-events:none;
+    display:flex; flex-direction:column; justify-content:space-between; padding:14px 16px;}
+  #worldHud .top, #worldHud .bottom{display:flex; flex-direction:column; gap:8px; align-items:center;}
+  #worldHud .bottom{width:100%;}
+  #worldTitle{background:rgba(20,26,51,.86); border:1px solid var(--line); border-radius:10px;
+    padding:6px 16px; font-weight:900; letter-spacing:2px; color:var(--gold);}
+  #worldPrompt{color:var(--gold); font-weight:700; text-align:center; max-width:min(92vw,720px);
+    background:rgba(20,26,51,.82); border:1px solid var(--line); border-radius:10px; padding:8px 16px;
+    min-height:20px; backdrop-filter:blur(4px);}
+  #worldStat{display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+    background:rgba(20,26,51,.82); border:1px solid var(--line); border-radius:10px;
+    padding:6px 14px; font:12px/1.5 monospace; color:var(--dim);}
+  #worldStat b{color:var(--teal);}
+  #worldParty{color:var(--dim); font-size:13px; background:rgba(20,26,51,.82);
+    border:1px solid var(--line); border-radius:10px; padding:6px 14px;}
+  #worldParty b{color:var(--text);}
+  #worldHint{color:var(--dim); font-size:12px; background:rgba(11,14,26,.6);
+    border-radius:8px; padding:4px 12px;}
+  #partyPanel{position:fixed; inset:0; z-index:55; display:none; align-items:center;
+    justify-content:center; background:rgba(11,14,26,.9);}
+  #partyPanel.on{display:flex;}
+  #partyBox{background:var(--card); border:2px solid var(--line); border-radius:16px;
+    padding:24px 28px; min-width:min(92vw,480px);}
+  #partyBox h3{margin-bottom:12px; letter-spacing:1px;}
+  .prow{display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:10px;
+    border:1px solid transparent;}
+  .prow.active{border-color:var(--teal);}
+  .prow img{width:44px; height:44px; image-rendering:pixelated;}
+  .prow .k{color:var(--coral); font-weight:900;}
+  .prow small{color:var(--dim); display:block;}
+  #titleBtns{display:flex; gap:12px;}
+  #selftest{position:fixed; right:12px; bottom:12px; z-index:70; display:none;
+    background:rgba(20,26,51,.92); border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; font:12px/1.7 monospace; color:var(--text);
+    max-height:44vh; overflow:auto; max-width:min(92vw,560px);}
+  #selftest.on{display:block;}
+</style>
+</head>
+<body>
+
+<!-- ============ START SCREEN ============ -->
+<div id="startScreen">
+  <div class="tag">Typejoy Plugin · Monster Battle</div>
+  <h1>TYPEMON</h1>
+  <div id="titleBtns">
+    <button id="startBtn">New Game</button>
+    <button id="continueBtn" style="display:none">Continue</button>
+  </div>
+  <div class="hint">
+    Type the glowing key <b>in rhythm</b> to attack. Perfect hits are criticals.
+    Wrong keys dodge — they never punish you. Miss the beat and the enemy strikes!
+  </div>
+</div>
+
+<!-- ============ STARTER PICK (world layer) ============ -->
+<div id="starterRoot">
+  <h2>CHOOSE YOUR TYPEMON</h2>
+  <div id="starterCards"></div>
+  <div class="hint" style="color:var(--dim);font-size:13px">Press 1, 2, or 3 — or click.</div>
+</div>
+
+<!-- ============ OVERWORLD (walkable Route A) ============ -->
+<div id="worldRoot">
+  <canvas id="worldCanvas"></canvas>
+  <div id="worldHud">
+    <div class="top">
+      <div id="worldTitle">ROUTE A</div>
+      <div id="worldPrompt"></div>
+    </div>
+    <div class="bottom">
+      <div id="worldStat"><span id="worldCoords"></span> · <span id="worldGrass"></span></div>
+      <div id="worldParty"></div>
+      <div id="worldHint">Arrows / WASD: walk · Enter or Space: interact · C: collection</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PARTY / COLLECTION ============ -->
+<div id="partyPanel">
+  <div id="partyBox">
+    <h3>COLLECTION</h3>
+    <div id="partyRows"></div>
+    <div class="hint" style="color:var(--dim);font-size:13px;margin-top:10px">Press 1-9 to switch · C or Esc to close</div>
+  </div>
+</div>
+
+<!-- ============ SELFTEST (Slice-5 harness readout) ============ -->
+<div id="selftest"></div>
+
+<!-- ============ BATTLE ============ -->
+<div id="battleRoot">
+  <canvas id="battleCanvas"></canvas>
+  <div id="hud">
+    <span id="roundCounter" style="color:var(--gold);font-weight:800;font-size:12px;margin-right:4px">ATTACK 1</span>
+    <div class="mon"><img id="playerFace" alt=""><b id="playerName">HOPLING</b>
+      <div class="hpwrap"><div class="hpfill" id="playerHp"></div></div>
+      <span id="playerHpText" style="color:var(--dim);font-size:12px">100/100</span>
+    </div>
+    <div style="color:var(--dim)">VS</div>
+    <div class="mon"><img id="enemyFace" alt=""><b id="enemyName">BULWARK</b>
+      <div class="hpwrap"><div class="hpfill" id="enemyHp"></div></div>
+      <span id="enemyHpText" style="color:var(--dim);font-size:12px">100/100</span>
+    </div>
+  </div>
+  <div id="combo">COMBO ×1</div>
+  <!-- next-key feed: between HP bars and counter, scrolls right-to-left -->
+  <div id="keyFeed"><div id="keyFeedInner"></div></div>
+  <!-- judgment counter: pinned to the very bottom -->
+  <div id="counter">
+    <span class="cnt ok">PERFECT <b id="cPerfect">0</b></span>
+    <span class="cnt good">GREAT <b id="cGreat">0</b></span>
+    <span class="cnt mid">GOOD <b id="cGood">0</b></span>
+    <span class="cnt bad">MISS <b id="cMiss">0</b></span>
+  </div>
+  <div id="menuBar">
+    <div class="menuKey" data-menu="m0"><span class="k">1</span><span class="moveName">EMBER</span></div>
+    <div class="menuKey" data-menu="m1"><span class="k">2</span><span class="moveName">TACKLE</span></div>
+    <div class="menuKey" data-menu="m2"><span class="k">3</span><span class="moveName">GUST</span></div>
+    <div class="menuKey" data-menu="capture"><span class="k">4</span>CAPTURE</div>
+  </div>
+  <div id="typejoyWrap"></div>
+  <div id="resolve">
+    <h2 id="resolveTitle"></h2>
+    <img class="monster" id="resolveMonster" alt="">
+    <div class="sub" id="resolveSub"></div>
+    <button id="againBtn">Return to World</button>
+  </div>
+</div>
+
+<script src="vendor/typejoy.js" type="module"></script>
+<script type="module">
+"use strict";
+import { createSession, DEFAULT_THEME } from "./vendor/typejoy.js";
+import { MONSTERS, ROUND_BUDGET, STARTER_IDS, assertRegistry } from "../src/data/monsters.js";
+import { ROUTE_A, assertRoute } from "../src/data/route_a.js";
+import { commitNodeClear, isNodeCleared } from "../src/domain/world.js";
+import { makeOwned, addCapture, switchActive, getActive, awardXp } from "../src/domain/collection.js";
+import { saveGame, loadSave } from "../src/domain/persistence.js";
+import {
+  MAPS, GRASS_THRESHOLD, moveState, advanceGrass, applyTransition, facingTile,
+  spawnFor, encounterZoneAt, zoneToNode, pickEncounterIndexed,
+} from "../src/domain/overworld.js";
+import { createWorldView } from "../src/view/world_view.js";
+/* =====================================================================
+   TYPEMON — playable battle demo (prototype, not final engine)
+   ---------------------------------------------------------------------
+   Composition over extension: this is a Typejoy GamePlugin consumer.
+   The BattleState machine composes judge hooks; it never extends the
+   framework. Menu gate = judge.detach() + tick-hold + plugin keydown,
+   exit order = setStartTime → resume tick → attach LAST.
+   ===================================================================== */
+
+// Repo-relative asset prefix: demo/index.html → repo root. Works on the local
+// dev server (127.0.0.1:8770/demo/) AND GH Pages subpath (/repo/demo/), because
+// assets/ is always a sibling of demo/. NEVER use a leading "/" — that breaks
+// on the GH Pages subpath (the class of bug we keep catching).
+const RP = "../";
+
+const CFG = {
+  player:  { id: "1",  name: "HOPLING", sprite: "assets/ccbysa/opmons/1-0.png" },
+  enemy:   { id: "53", name: "BULWARK", sprite: "assets/ccbysa/opmons/53-0.png" },
+  bpm: 60,          // NOTE grid = 1000ms/letter (typable child pace). Music stays 120 BPM flavor
+  difficulty: "easy",              // ±500/±700/±1000 windows for 7–10yo
+  track: "assets/ccbysa/audio/8bit-battle.ogg",
+  leadInMs: 1500,
+  beatMs: 60000/120,
+  playerMaxHp: 100,
+  enemyMaxHp: 100,
+  damage: { perfect: 16, great: 10, good: 5 },   // crit / hit / glance
+  enemyDamage: 8,                                // per enemy attack
+  captureThreshold: 30,                          // combo → capture chance
+};
+const KEYS = "asdfjk";                            // home-row letters for young fingers
+
+/* ===================== MOVE SYSTEM =====================
+   Each monster has 3 moves (4-6 letters, common letters only). Typing the move
+   name IS the attack — damage = letter_count × type_multiplier × timing_multiplier.
+   Type ids come from the island's 18-icon system (poses.json type-* entries).
+   Built from the data registry (src/data/monsters.js); entries for "1"/"53" are
+   identical to the original literal. */
+const MOVE_DB = {};
+for (const id of Object.keys(MONSTERS)) MOVE_DB[id] = MONSTERS[id].moves;
+const TYPE_MULT = {
+  BURNING: 1.3, LIQUID: 1.2, GROUND: 1.2, ELECTRON: 1.25, FIGHT: 1.15,
+  MENTAL: 1.1, DRAGON: 1.35, COLD: 1.2, BUG: 1.05, VEGETAL: 1.0,
+  GHOST: 1.1, MAGIC: 1.15, METAL: 1.15, MINERAL: 1.2, TOXIC: 1.1,
+  SKY: 1.05, NEUTRAL: 1.0, BAD: 1.0,
+};
+const TIMING_MULT = { perfect: 1.5, great: 1.0, good: 0.75 };
+
+// ---- assets -------------------------------------------------------------
+const imgs = {};
+function loadImg(path){
+  return new Promise(res => {
+    const i = new Image();
+    const to = setTimeout(() => res(null), 3000);   // never block the battle on an image
+    i.onload = () => { clearTimeout(to); res(i); };
+    i.onerror = () => { clearTimeout(to); res(null); };
+    i.src = RP + path;   // repo-relative — works at localhost root AND GH Pages subpath
+  });
+}
+const playerImg = null, enemyImg = null;
+let monsterImgs = {};
+
+// ---- session / state ----------------------------------------------------
+let session = null, audioCtx = null, musicSrc = null;
+const S = {
+  phase: "idle",            // idle | intro | menu | battle | resolve
+  combo: 0,
+  playerHp: CFG.playerMaxHp,
+  enemyHp: CFG.enemyMaxHp,
+  captured: false,
+  raf: 0,
+  pendingText: "",
+  roundWords: [],           // D: one word (or pair) per round
+  roundIndex: 0,
+  sessionDone: false,
+  currentMove: null,        // move system: the selected move being typed
+};
+
+/* ===================== WORLD GAME STATE (MVP Slice 3/4) =====================
+   CUR = current battle participants (replaces the hardcoded CFG.player/enemy
+   reads; CFG numbers — HP, damage, capture threshold — stay frozen).
+   G = persisted game state { activeMonsterId, collection, route }.
+   W.phase = shell phase: title | starter | world | party (battle uses S.phase). */
+const CUR = {
+  playerId: "1",
+  enemyId: "53",
+  enemyLevel: 1,
+  enemyIsBoss: false,
+  enemySprite: "53-0.png",
+  nodeId: null,
+  bg: "battle_bkg/background_grass.png",
+};
+let G = null;
+const W = { phase: "title" };
+const store = {
+  getItem: (k) => { try { return localStorage.getItem(k); } catch(e){ return null; } },
+  setItem: (k, v) => { try { localStorage.setItem(k, v); } catch(e){} },
+};
+function activeOwned(){ return G ? getActive(G.collection, G.activeMonsterId) : null; }
+function persistBoot(reason){
+  const ok = G ? saveGame(store, { activeMonsterId: G.activeMonsterId, collection: G.collection, route: G.route }) : false;
+  console.log("[typemon] save (" + reason + "): " + (ok ? "ok" : "FAILED"));
+  return ok;
+}
+
+/* ---- overworld state (world-owned) -------------------------------------
+   G.route carries the grid position so the world can restore the exact tile
+   after a battle (no reload). nodeIndex stays for the frozen save schema
+   (persistence.validateSave requires it); the map/render never reads it. */
+const worldView = createWorldView(document.getElementById("worldCanvas"));
+function newRouteState(){
+  const s = spawnFor("route_a");
+  return {
+    routeId: "route_a", nodeIndex: 0, cleared: [], flags: {}, done: false,
+    mapId: s.mapId, row: s.row, col: s.col, face: s.face, grassSteps: 0, encIndex: 0,
+  };
+}
+// Normalize a (possibly older) saved route into a valid world position.
+function normalizeRoute(r){
+  const base = newRouteState();
+  if (!r || typeof r !== "object") return base;
+  const mapId = MAPS[r.mapId] ? r.mapId : base.mapId;
+  const sp = spawnFor(mapId);
+  const faces = ["up", "down", "left", "right"];
+  return {
+    ...base, ...r, mapId,
+    row: Number.isInteger(r.row) ? r.row : sp.row,
+    col: Number.isInteger(r.col) ? r.col : sp.col,
+    face: faces.includes(r.face) ? r.face : sp.face,
+    grassSteps: Number.isInteger(r.grassSteps) ? r.grassSteps : 0,
+    encIndex: Number.isInteger(r.encIndex) ? r.encIndex : 0,
+  };
+}
+
+// ---- battle canvas --------------------------------------------------------
+const cv = document.getElementById("battleCanvas");
+const ctx = cv.getContext("2d");
+function fit(){ cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener("resize", fit); fit();
+
+const fx = { list: [], spawn(x,y,kind,val){ this.list.push({x,y,kind,val,t:0,dur:kind==="crit"?700:kind==="ring"?400:250}); } };   // cull: nothing >700ms; dots 250ms
+function drawFx(dt){
+  fx.list = fx.list.filter(f => (f.t += dt) < f.dur);
+  for (const f of fx.list){
+    const p = f.t / f.dur;
+    ctx.save(); ctx.globalAlpha = 1 - p;
+    if (f.kind === "crit"){
+      ctx.fillStyle = "#ffd166";
+      for (let i=0;i<8;i++){
+        const a = (i/8)*Math.PI*2 + p*4, r = 40 + p*90;
+        ctx.beginPath(); ctx.arc(f.x + Math.cos(a)*r, f.y + Math.sin(a)*r, 4*(1-p)+1, 0, Math.PI*2); ctx.fill();
+      }
+    } else if (f.kind === "ring"){
+      // enemy attack telegraph: a proper charging RING at the monster, not dots
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 5*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 16 + p*44, 0, Math.PI*2); ctx.stroke();
+    } else if (f.kind === "ember"){
+      // BURNING: ember ring + rising sparks
+      ctx.strokeStyle = "#ff6b35"; ctx.lineWidth = 3*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 14 + p*36, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "#ffd166";
+      for (let i=0;i<6;i++){ const a=(i/6)*Math.PI*2+p*3, r=18+p*30;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r, f.y+Math.sin(a)*r-12*p, 3*(1-p)+1, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "splash"){
+      // LIQUID: 8-dot radial splash
+      ctx.fillStyle = "#4fc3f7";
+      for (let i=0;i<8;i++){ const a=(i/8)*Math.PI*2, r=20+p*42;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r, f.y+Math.sin(a)*r, 3.5*(1-p)+1, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "tremor"){
+      // GROUND: dust cloud + tremor shake
+      ctx.fillStyle = "#a1887f"; ctx.globalAlpha = (1-p)*0.7;
+      ctx.beginPath(); ctx.arc(f.x, f.y+10*p, 18+14*p, 0, Math.PI*2); ctx.fill();
+    } else if (f.kind === "zap"){
+      // ELECTRON: sharp ring + arc sparks
+      ctx.strokeStyle = "#ffe082"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 12+p*30, 0, Math.PI*2); ctx.stroke();
+      for (let i=0;i<4;i++){ const a=(i/4)*Math.PI*2+p*2;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r0(f,p), f.y+Math.sin(a)*r0(f,p), 2.5, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "frost"){
+      // COLD: frost ring + 4 icicles
+      ctx.strokeStyle = "#b3e5fc"; ctx.lineWidth = 3*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 12+p*28, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "#e1f5fe";
+      for (let i=0;i<4;i++){ const a=(i/4)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(f.x+Math.cos(a)*16, f.y+Math.sin(a)*16);
+        ctx.lineTo(f.x+Math.cos(a)*30, f.y+Math.sin(a)*30); ctx.lineWidth=4; ctx.stroke(); }
+    } else if (f.kind === "impact"){
+      // FIGHT: impact flash + screen shake feel
+      ctx.fillStyle = "#ffab91";
+      ctx.beginPath(); ctx.arc(f.x, f.y, 10+30*(1-p), 0, Math.PI*2); ctx.fill();
+    } else if (f.kind === "halo"){
+      // MENTAL: cyan ripple halo
+      ctx.strokeStyle = "#80deea"; ctx.lineWidth = 2.5*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 10+p*34, 0, Math.PI*2); ctx.stroke();
+    } else if (f.kind === "dragon"){
+      // DRAGON: large ring + ember crown
+      ctx.strokeStyle = "#ff7043"; ctx.lineWidth = 4*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 16+p*48, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "#ffd166";
+      for (let i=0;i<5;i++){ const a=(i/5)*Math.PI*2-p*2;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*(22+p*20), f.y+Math.sin(a)*(22+p*20), 3.5, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "spore"){
+      // BUG: green spore burst
+      ctx.fillStyle = "#81c784";
+      for (let i=0;i<6;i++){ const a=(i/6)*Math.PI*2+p*1.5, r=14+p*30;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r, f.y+Math.sin(a)*r, 2.5*(1-p)+1, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "bloom"){
+      // VEGETAL: slow bloom scale-up
+      ctx.strokeStyle = "#a5d6a7"; ctx.lineWidth = 3*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 8+34*p, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "#c8e6c9";
+      ctx.beginPath(); ctx.arc(f.x, f.y, 4+10*p, 0, Math.PI*2); ctx.fill();
+    } else if (f.kind === "wisp"){
+      // GHOST: purple wisp ring, soft alpha
+      ctx.strokeStyle = "#ce93d8"; ctx.globalAlpha = (1-p)*0.8; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 10+30*p, 0, Math.PI*2); ctx.stroke();
+    } else if (f.kind === "star"){
+      // MAGIC: 4-point star burst
+      ctx.fillStyle = "#f48fb1";
+      for (let i=0;i<4;i++){ const a=(i/4)*Math.PI*2+p*2;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r0(f,p), f.y+Math.sin(a)*r0(f,p), 3.5*(1-p)+1.5, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "clang"){
+      // METAL: steel ring + 3 small sparks
+      ctx.strokeStyle = "#cfd8dc"; ctx.lineWidth = 3*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 12+p*26, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "#90a4ae";
+      for (let i=0;i<3;i++){ const a=(i/3)*Math.PI*2;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r0(f,p), f.y+Math.sin(a)*r0(f,p), 2.5, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "shards"){
+      // MINERAL: angular shard ring
+      ctx.fillStyle = "#b0bec5";
+      for (let i=0;i<8;i++){ const a=(i/8)*Math.PI*2;
+        ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*r0(f,p), f.y+Math.sin(a)*r0(f,p), 2.5*(1-p)+1, 0, Math.PI*2); ctx.fill(); }
+    } else if (f.kind === "gas"){
+      // TOXIC: green gas cloud
+      ctx.fillStyle = "#66bb6a"; ctx.globalAlpha = (1-p)*0.6;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 16+22*p, 0, Math.PI*2); ctx.fill();
+    } else if (f.kind === "gust"){
+      // SKY: 3 wind streaks drifting right→left
+      ctx.strokeStyle = "#b3e5fc"; ctx.lineWidth = 2.5*(1-p)+1;
+      for (let i=0;i<3;i++){ const y0 = f.y - 12 + i*12;
+        ctx.beginPath(); ctx.moveTo(f.x+16, y0); ctx.lineTo(f.x-26, y0); ctx.stroke(); }
+    } else if (f.kind === "pulse"){
+      // NEUTRAL: single white pulse
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5*(1-p)+1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 8+26*p, 0, Math.PI*2); ctx.stroke();
+    } else if (f.kind === "crack"){
+      // BAD: cracked split ring
+      ctx.strokeStyle = "#ff8a80"; ctx.lineWidth = 2.5;
+      for (let i=0;i<3;i++){ const a=(i/3)*Math.PI*2+p;
+        ctx.beginPath(); ctx.moveTo(f.x+Math.cos(a)*10, f.y+Math.sin(a)*10);
+        ctx.lineTo(f.x+Math.cos(a)*30, f.y+Math.sin(a)*30); ctx.stroke(); }
+    } else if (f.kind === "hit"){
+      ctx.fillStyle = "#e94560";
+      for (let i=0;i<5;i++){
+        const a = (i/5)*Math.PI*2 + p*2, r = 30 + p*55;
+        ctx.beginPath(); ctx.arc(f.x + Math.cos(a)*r, f.y + Math.sin(a)*r, 3*(1-p)+1, 0, Math.PI*2); ctx.fill();
+      }
+    } else {
+      ctx.font = "900 " + (20 + 14*(1-p)) + "px Inter,sans-serif";
+      ctx.fillStyle = f.val < 0 ? "#ff6b81" : "#06d6a0";
+      ctx.textAlign = "center";
+      ctx.fillText(f.val < 0 ? "-" + Math.abs(f.val) : "+" + f.val, f.x, f.y - p*36);
+    }
+    ctx.restore();
+  }
+}
+function drawBattle(dt, songTime){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // background
+  const bg = imgs[CUR.bg] || imgs["battle_bkg/background_grass.png"];
+  if (bg){ const s = cv.height/bg.height; ctx.globalAlpha=.85; ctx.drawImage(bg, 0,0,bg.width*s*1.6, cv.height); ctx.globalAlpha=1; }
+  const W = cv.width, H = cv.height;
+  const ps = H * 0.30;              // player size
+  const es = H * 0.26;              // enemy size
+  // GROUND SHADOWS FIRST — beneath the sprites (fixes shadow-over-sprite)
+  ctx.fillStyle = "rgba(0,0,0,.35)";
+  ctx.beginPath(); ctx.ellipse(W*0.62, H*0.16 + es*0.86, es*0.4, 12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(W*0.18, H*0.52 + ps*0.9, ps*0.42, 14, 0, 0, Math.PI*2); ctx.fill();
+  // enemy (top-right), idle bob
+  const eImg = monsterImgs[CUR.enemyId];
+  if (eImg){
+    const bob = Math.sin(performance.now()/500)*6;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 20;
+    ctx.drawImage(eImg, W*0.62 - es/2, H*0.16 + bob, es, es);
+    ctx.restore();
+  }
+  // player (bottom-left)
+  const pImg = monsterImgs[CUR.playerId];
+  if (pImg){
+    const bob = Math.sin(performance.now()/380+1)*5;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 20;
+    ctx.drawImage(pImg, W*0.18 - ps/2, H*0.52 + bob, ps, ps);
+    ctx.restore();
+  }
+  drawFx(dt);
+}
+function setHpBars(){
+  const ph = document.getElementById("playerHp"), eh = document.getElementById("enemyHp");
+  ph.style.width = (S.playerHp/CFG.playerMaxHp*100) + "%";
+  ph.classList.toggle("low", S.playerHp/CFG.playerMaxHp < .35);
+  eh.style.width = (S.enemyHp/CFG.enemyMaxHp*100) + "%";
+  eh.classList.toggle("low", S.enemyHp/CFG.enemyMaxHp < .35);
+  document.getElementById("playerHpText").textContent = S.playerHp + "/" + CFG.playerMaxHp;
+  document.getElementById("enemyHpText").textContent = S.enemyHp + "/" + CFG.enemyMaxHp;
+}
+function comboEl(){ const c = document.getElementById("combo"); c.textContent = "COMBO ×" + S.combo; }
+
+/* ===================== LETTER FEED (Typejoy cursor-indexed row) =====================
+   Mirrors the original Typejoy demo's character-sequence feed (renderCharacterSequence):
+   one chip per note of the in-flight word, indexed to the judge cursor. State comes
+   ONLY from the live judge (state.cursor + getCurrentNote), the SAME source that drives
+   the top keyboard — so the feed cannot drift from the keyboard. chip[i<cursor] = typed
+   (dim), chip[i===cursor] = CURRENT expected key (hot), chip[i>cursor] = upcoming. */
+let feedBuilt = false;
+function buildFeed(beatMap){
+  const inner = document.getElementById("keyFeedInner");
+  inner.replaceChildren();
+  beatMap.notes.forEach((note, i) => {
+    const sq = document.createElement("div");
+    sq.className = "feedKey";
+    sq.dataset.key = note.key;                  // machine key (e.g. " " for space)
+    sq.dataset.idx = String(i);
+    sq.textContent = note.key === " " ? "␣" : note.key.toUpperCase();
+    inner.appendChild(sq);
+  });
+  feedBuilt = true;
+}
+function updateFeed(){
+  if (!feedBuilt || !session || S.phase !== "battle") return;
+  const inner = document.getElementById("keyFeedInner");
+  const cursor = session.judge.state.cursor;   // judge cursor = the keyboard's source of truth
+  for (let i = 0; i < inner.children.length; i++){
+    const el = inner.children[i];
+    el.classList.toggle("done", i < cursor);
+    el.classList.toggle("current", i === cursor);
+  }
+}
+
+/* ===================== LAYOUT ASSERTION GATE =====================
+   Deterministic pass/fail for layout claims, run on EVERY animation frame
+   (the rAF loop that drives the judge — free) and STATE-AWARE: keyFeed only
+   asserts when a word is actually in flight (phase==="battle"), keyboard always.
+   So "PASS" means green across the states the child actually occupies. */
+function assertLayout(){
+  const out = [];
+  try {
+    // KEYBOARD: must be flush to viewport top (top-aligned) AND substantially
+    // scaled (see sizeKeyboardToViewport below — the framework band is enlarged
+    // through FeedbackLayer.resize, keeping one owner). Height is asserted live.
+    const svg = document.querySelector("#typejoyWrap svg");
+    const kb = svg || document.querySelector("#typejoyWrap [style*='bottom']") || document.querySelector("#typejoyWrap canvas");
+    const battleOn = document.getElementById("battleRoot").classList.contains("on");
+    if (kb){
+      const r = kb.getBoundingClientRect();
+      const topOk = r.top <= 4;
+      out.push(`keyboardRect.top=${Math.round(r.top)} → ${topOk ? "PASS" : "FAIL"}`);
+      const minH = Math.round(window.__kbMinH || 240);
+      const tallEnough = r.height >= minH - 2;   // small sub-pixel tolerance
+      out.push(`keyboardH=${Math.round(r.height)}px ≥ ${minH} → ${tallEnough ? "PASS" : "FAIL"}`);
+    } else if (battleOn && session){
+      out.push("keyboard element not found → FAIL");
+    } else out.push("keyboard: idle (no session)");
+    // MENU vs HUD: rectangles must NOT intersect while the menu is open.
+    const vis = document.getElementById("menuBar").className.includes("on");
+    out.push(`menuOn=${vis}`);
+    if (vis){
+      const mr = document.getElementById("menuBar").getBoundingClientRect();
+      const hr = document.getElementById("hud").getBoundingClientRect();
+      const ox = Math.max(0, Math.min(mr.right, hr.right) - Math.max(mr.left, hr.left));
+      const oy = Math.max(0, Math.min(mr.bottom, hr.bottom) - Math.max(mr.top, hr.top));
+      const overlap = ox > 1 && oy > 1;
+      out.push(`menuHudOverlap=${ox}x${oy}px → ${overlap ? "FAIL" : "PASS"}`);
+    }
+    // LETTER FEED (judge-cursor indexed): only asserted during active battle.
+    if (S.phase === "battle"){
+      const kf = document.getElementById("keyFeed");
+      if (kf){
+        const r = kf.getBoundingClientRect();
+        const distFromBottom = Math.round(innerHeight - r.bottom);
+        out.push(`keyFeed.bottom=${distFromBottom}px → ${distFromBottom > 20 && distFromBottom < 200 ? "PASS" : "FAIL"}`);
+      } else out.push("keyFeed missing → FAIL");
+      const fc = document.querySelectorAll("#keyFeed .feedKey").length;
+      out.push(`feedKeys=${fc} → ${fc > 0 ? "PASS" : "FAIL"}`);
+      // SYNCHRONIZATION probe: the feed's CURRENT chip (i === judge cursor) must
+      // show the SAME key the judge/keyboard expects this instant. The feed is
+      // cursor-indexed to session.judge.state.cursor. Letter equivalence is asserted
+      // every frame; the `.current` highlight correctness is asserted once the note is
+      // mid-window (judge cursor advanced by a keypress is otherwise 1 frame ahead of
+      // the feed's rAF paint — a false FAIL). This PASSes during a real battle, not
+      // only autoplay.
+      if (session && session.judge){
+        const cur = session.judge.state.cursor;
+        const total = (session.judge.beatMap && session.judge.beatMap.notes) ? session.judge.beatMap.notes.length : 0;
+        const note = session.judge.getCurrentNote() || session.judge.getExpectedNote();
+        const chip = cur != null && cur < total && document.querySelector(`#keyFeed .feedKey[data-idx="${cur}"]`);
+        if (chip && note && cur < total){
+          const shown = chip.dataset.key;
+          const letterOk = shown === note.key;
+          const songTime = session.judge.getSongTime();
+          const midWindow = songTime - note.time > 50;
+          // highlight only strictly asserted in a stable mid-window (rAF settled)
+          const hot = chip.classList.contains("current");
+          const match = letterOk && (midWindow ? hot : true);
+          out.push(`feedCur@${cur}="${shown}" vs judge="${note.key}" hot=${hot}${midWindow ? " [mid]" : ""} → ${match ? "PASS" : "FAIL"}`);
+        } else {
+          out.push("feedCur: sampling idle (no pending note / empty feed)");
+        }
+      }
+    } else {
+      out.push("keyFeed: idle (not in battle)");
+    }
+    // animation-layer probe: the framework feedback render methods must exist
+    const fb = session && session.feedback;
+    const hasRender = !!(fb && fb.renderHit && fb.renderMiss && fb.renderCombo);
+    if (!session) out.push("feedback: idle (world)");
+    else out.push(`feedback.renderHit/Miss/Combo ${hasRender ? "present" : "MISSING"} → ${hasRender ? "PASS" : "FAIL"}`);
+  } catch(e){ out.push("assert error: " + e.message); }
+  window.__lastGate = "[typemon] check: " + out.join(" | ");
+  console.log(window.__lastGate);
+}
+window.assertLayout = assertLayout;
+// rAF sampling: run the check ~4x/sec (every ~15th frame) — covers the frames a
+// child occupies. ALSO a 2s interval fallback so headless/console verification
+// always sees the line even where virtual time doesn't advance rAF frames.
+let __frameCount = 0;
+function __gateLoop(){
+  if ((++__frameCount % 15) === 0) assertLayout();
+  requestAnimationFrame(__gateLoop);
+}
+requestAnimationFrame(__gateLoop);
+setInterval(assertLayout, 2000);
+
+/* ===================== BATTLE STATE MACHINE =====================
+   INTRO → (menu gate, judge detached) → battle → RESOLVE
+   The only place input routing is decided: judge vs menu.       */
+function openMenu(){
+  S.phase = "menu";
+  if (session) session.judge.detach();         // no keystroke can reach timing judgment
+  // render the player's move set into the menu (CAPTURE stays on 4)
+  const moves = MOVE_DB[CUR.playerId] || MOVE_DB["1"];
+  const keys = document.querySelectorAll("#menuBar .menuKey[data-menu^='m']");
+  keys.forEach((el, i) => {
+    const mv = moves[i];
+    if (mv){
+      el.style.display = "flex";
+      const nm = el.querySelector(".moveName");
+      if (nm) nm.textContent = mv.name;
+    } else el.style.display = "none";
+  });
+  document.getElementById("menuBar").classList.add("on");
+  // Position the menu ABOVE the HUD (measured live) so it can never overlap the
+  // HP/name bar regardless of viewport. bottom offset = hudTop gap from bottom.
+  const hudRect = document.getElementById("hud").getBoundingClientRect();
+  const menu = document.getElementById("menuBar");
+  menu.style.bottom = Math.max(120, Math.round(innerHeight - hudRect.top + 16)) + "px";
+  stopTick();
+}
+function closeMenu(){
+  document.getElementById("menuBar").classList.remove("on");
+  // D: if a new round was queued, OR this is the first battle (no session yet),
+  // rebuild the session for the current round word
+  if (S.sessionDone || !session){
+    S.sessionDone = false;
+    if (session){ try { session.destroy(); } catch(e){} }
+    session = createSession({
+      container: document.getElementById("typejoyWrap"),
+      content: S.currentMove ? S.currentMove.name : S.roundWords[S.roundIndex],
+      bpm: CFG.bpm,
+      difficulty: CFG.difficulty,
+      hooks,
+      feedback: { theme: window.__typemonTheme },
+    });
+    hideTypejoyStats();
+    sizeKeyboardToViewport();          // enlarge the framework keyboard band (supported surface)
+    buildFeed(session.judge.beatMap);
+    hideFrameworkExpectedKey();
+    alignKeyboardToTop();
+  }
+  // load-bearing exit order (per contract): re-baseline → resume tick → attach LAST
+  session.judge.setStartTime(performance.now());
+  startTick();
+  session.judge.attach(session.normBus);
+  S.phase = "battle";
+  // approach rings begin the moment the selection is made — no dead gap
+  session.feedback.startRings && session.feedback.startRings();
+}
+function nextRound(){
+  S.sessionDone = true;                       // guard against double-fire
+  S.roundIndex++;
+  // visible attack counter for verification (per-move, since rounds are now moves)
+  const rc = document.getElementById("roundCounter");
+  if (rc) rc.textContent = "ATTACK " + (S.roundIndex+1) + "/" + S.roundWords.length;
+  if (S.roundIndex >= S.roundWords.length){ resolve(true); return; }
+  // D: the pause between words lives HERE — the menu seam, judge detached,
+  // no penalty possible. The next word starts on a fresh attack choice.
+  S.phase = "menu";
+  openMenu();
+}
+function menuChoice(n){
+  if (n === "capture"){ tryCapture(); return; }
+  // move selection: set the current move; closeMenu creates the session with
+  // the MOVE NAME as content — typing it IS the attack (through the judge)
+  const moves = MOVE_DB[CUR.playerId] || MOVE_DB["1"];
+  const mv = moves[parseInt(n.replace("m",""), 10)];
+  if (!mv) return;
+  S.currentMove = mv;
+  showCombo(mv.name + "!", 700);
+  closeMenu();
+}
+function tryCapture(){
+  if (S.enemyHp <= 0){ closeMenu(); return; }
+  const chance = S.combo >= CFG.captureThreshold ? 0.8 : 0.25 + S.combo * 0.01;
+  if (Math.random() < chance){
+    S.captured = true; S.enemyHp = 0; setHpBars();
+    resolve(true);
+  } else {
+    showCombo("ESCAPED!");
+    closeMenu();
+  }
+}
+function showCombo(txt, dur=900){
+  const c = document.getElementById("combo");
+  c.textContent = txt; c.style.opacity = 1;
+  setTimeout(() => c.style.opacity = 0, dur);
+}
+
+/* ===================== TICK (stale-note driver) ===================== */
+let ticking = false;
+function startTick(){
+  if (ticking) return;
+  ticking = true;
+  (function loop(){
+    if (!ticking) return;
+    const st = session.judge.state;
+    if (S.phase === "battle" && !st.isComplete){
+      const before = st.cursor;
+      session.judge.tick();                  // fires onNoteStale for expired notes
+      if (session.judge.state.cursor > before){
+        enemyAttack("stale");
+      }
+    }
+    // ONE convergence point: every completion path (hit/miss/stale) lands here.
+    // Re-read state AFTER tick — tick() mutates the cursor, so a pre-tick capture
+    // would miss a stale-path completion (the late-final-letter stall).
+    if (S.phase === "battle" && session.judge.state.isComplete && !S.sessionDone) nextRound();
+    updateFeed();
+    S.raf = requestAnimationFrame(loop);
+  })();
+}
+function stopTick(){ ticking = false; cancelAnimationFrame(S.raf); }
+
+/* ===================== HOOKS (the GamePlugin contract surface) ===================== */
+/* Per-type FX: keyed off the move's type id (the animation map is the
+   contract; motion/FX read from one source per move). Spawns on hit at the enemy. */
+const TYPE_FX = {
+  BURNING: "ember", LIQUID: "splash", GROUND: "tremor", ELECTRON: "zap",
+  FIGHT: "impact", MENTAL: "halo", DRAGON: "dragon", COLD: "frost",
+  BUG: "spore", VEGETAL: "bloom", GHOST: "wisp", MAGIC: "star",
+  METAL: "clang", MINERAL: "shards", TOXIC: "gas", SKY: "gust",
+  NEUTRAL: "pulse", BAD: "crack",
+};
+function spawnTypeFx(type, x, y){
+  fx.list.push({ x, y, kind: TYPE_FX[type] || "hit", t: 0, dur: 600 });
+}
+function r0(f, p){ return 16 + p * 30; }   // radial distance helper for type FX
+
+const hooks = {
+  onHit(evt){
+    // COMPOSE: forward to the framework's feedback layer FIRST so its keycap
+    // press animations / particles / combo display fire (root cause:
+    // the demo's hooks replaced this wiring instead of composing it).
+    try { if (session && session.feedback) session.feedback.renderHit && session.feedback.renderHit(evt.judgment, evt.key, evt.delta); } catch(e){}
+    if (S.phase !== "battle") return;
+    S.combo++;
+    comboEl();
+    // judgment counter (pinned bottom)
+    const key = evt.judgment === "perfect" ? "Perfect" : evt.judgment === "great" ? "Great" : "Good";
+    document.getElementById("c" + key).textContent = 1 + parseInt(document.getElementById("c" + key).textContent, 10);
+    // MOVE DAMAGE: letter_count × type_multiplier × timing_multiplier
+    // (the move being typed IS the attack — more typing, more power, type matchup matters)
+    const mv = S.currentMove;
+    const letters = mv ? mv.letters : CFG.damage[evt.judgment] || 5;
+    const typeMult = mv ? (TYPE_MULT[mv.type] || 1) : 1;
+    const timingMult = TIMING_MULT[evt.judgment] || 1;
+    const dmg = Math.max(3, Math.round(letters * typeMult * timingMult));
+    S.enemyHp = Math.max(0, S.enemyHp - dmg);
+    setHpBars();
+    // per-type FX at the enemy (move type is the animation key)
+    const W = cv.width, H = cv.height;
+    spawnTypeFx(mv ? mv.type : "NEUTRAL", W*0.62, H*0.22);
+    if (evt.judgment === "perfect") showCombo((mv ? mv.name : "CRIT") + "! ×" + S.combo, 600);
+    if (S.enemyHp <= 0) resolve(true);
+    // completion handled by the tick loop (single convergence point)
+  },
+  onWrongKey(){                              // dodge — defensive, never punishing
+    showCombo("DODGE", 450);
+  },
+  onMiss(evt){
+    try { if (session && session.feedback) session.feedback.renderMiss && session.feedback.renderMiss(evt.char, evt.expectedKey); } catch(e){}
+    if (S.phase !== "battle") return;
+    // C: spaces are soft-fail — suppress HP drain + combo break
+    if (evt && evt.key === " ") return;
+    S.combo = 0; comboEl();
+    document.getElementById("cMiss").textContent = 1 + parseInt(document.getElementById("cMiss").textContent, 10);
+    enemyAttack("miss");
+  },
+  onNoteStale(note){
+    try { if (session && session.feedback) session.feedback.renderStale && session.feedback.renderStale(note); } catch(e){}
+    if (S.phase !== "battle") return;
+    // C: spaces are soft-fail — no penalty for resting at a word boundary
+    if (note && note.key === " ") return;
+    S.combo = 0; comboEl();
+    enemyAttack("stale");
+    // completion handled by the tick loop
+  },
+  onCombo(count, mult){
+    try { if (session && session.feedback) session.feedback.renderCombo && session.feedback.renderCombo(count, mult); } catch(e){}
+    if (S.phase === "battle"){ comboEl(); }
+  },
+  onComboBreak(prev){
+    if (S.phase === "battle"){ showCombo("BROKEN ×" + prev, 600); }
+  },
+  onStreakThreshold(count){
+    if (S.phase === "battle") showCombo("ULT READY — CAPTURE!", 1000);
+  },
+};
+/* Hide Typejoy's built-in top-left stats counter (the plugin owns the bottom counter). */
+function hideTypejoyStats(){
+  try {
+    if (session && session.feedback){
+      if (session.feedback.statsDisplay) session.feedback.statsDisplay.style.display = "none";
+    }
+  } catch(e){}
+}
+/* Hide the framework's own expected-key indicator. It floats above the keyboard and
+   its per-frame top/left writes fight any plugin reposition — the two-owner war flagged
+   earlier. The plugin's single expected-key surface is now the letter feed's `.current`
+   chip (judge-cursor indexed), which lives in #keyFeed under the HUD. One element,
+   one owner, zero tug-of-war. */
+function hideFrameworkExpectedKey(){
+  try {
+    const ind = session && session.feedback && session.feedback.expectedKeyIndicator;
+    if (ind) ind.style.display = "none";
+  } catch(e){}
+}
+
+/* Align the keyboard to the viewport top, live. The framework keyboardContainer
+   is bottom:0;height:55% of the wrap — measure where the SVG keyboard actually
+   sits and shift the wrap so its top edge = 0. Framework keeps animation
+   ownership; we only move the wrapper. Runs after sessions and on a timer. */
+function alignKeyboardToTop(){
+  try {
+    const wrap = document.getElementById("typejoyWrap");
+    const svg = wrap && (wrap.querySelector("svg") || wrap.querySelector("canvas"));
+    if (!wrap || !svg) return;
+    const svgTop = svg.getBoundingClientRect().top;
+    const want = 0;
+    const shift = want - svgTop;
+    if (Math.abs(shift) > 2){
+      const cur = parseFloat(wrap.style.top) || 0;
+      wrap.style.top = (cur + shift) + "px";
+    }
+  } catch(e){}
+}
+/* Enlarge the framework keyboard through ITS OWN resize surface (FeedbackLayer.resize)
+   — a supported config method that also re-baselines the particle/ring canvases so the
+   whole keyboard band (bottom:0;height:55% of the container) grows consistently. We only
+   choose the container size; the framework owns every node + animation inside it. The
+   keyboard stays top-aligned because alignKeyboardToTop re-flushes the wrapper after. */
+function sizeKeyboardToViewport(){
+  try {
+    if (!session || !session.feedback || !session.feedback.resize) return;
+    const bandH = Math.max(280, Math.min(420, Math.round(innerHeight * 0.5))); // ~2x the old 165px band
+    const width  = Math.max(760, Math.min(960, Math.round(innerWidth * 0.9)));
+    const height = Math.round(bandH / 0.55);   // band is 55% of container height
+    window.__kbMinH = bandH;                    // gate threshold (browser geometry assert)
+    session.feedback.resize(width, height);
+  } catch(e){}
+}
+setInterval(alignKeyboardToTop, 500);   // self-corrects any drift; survives rebuilds
+function enemyAttack(kind){
+  const dmg = CFG.enemyDamage;
+  S.playerHp = Math.max(0, S.playerHp - dmg);
+  setHpBars();
+  const W = cv.width, H = cv.height;
+  fx.spawn(W*0.62, H*0.16, "ring", -dmg);   // telegraph ring at the ENEMY (attack source), not dots
+  if (S.playerHp <= 0) resolve(false);
+}
+/* Commit the finished battle through the pure domain, then persist.
+   Heal-to-full is structural (no HP field anywhere — Decision 4). */
+function commitBattle(win){
+  const j = {
+    perfect: parseInt(document.getElementById("cPerfect").textContent, 10) || 0,
+    great: parseInt(document.getElementById("cGreat").textContent, 10) || 0,
+    good: parseInt(document.getElementById("cGood").textContent, 10) || 0,
+    miss: parseInt(document.getElementById("cMiss").textContent, 10) || 0,
+  };
+  const captured = win && S.captured;
+  let extra = "";
+  if (win && G){
+    const idx = G.collection.findIndex(m => m.id === G.activeMonsterId);
+    if (idx >= 0){
+      const r = awardXp(G.collection[idx], j, true, captured);
+      const next = G.collection.slice(); next[idx] = r.owned; G.collection = next;
+      extra = " +" + r.earned + " XP" + (r.leveledUp ? " — LEVEL UP to " + r.owned.level + "!" : "");
+    }
+    if (captured) G.collection = addCapture(G.collection, MONSTERS[CUR.enemyId]);
+    G.route = commitNodeClear(G.route, CUR.nodeId, CUR.enemyIsBoss);
+  }
+  if (G) persistBoot(win ? (captured ? "resolve-captured" : "resolve-defeated") : "resolve-defeat");
+  return { captured, extra };
+}
+function resolve(win){
+  if (S.phase === "resolve") return;   // every terminal path enters RESOLVE exactly once
+  S.phase = "resolve";
+  stopTick();
+  try { session.judge.detach(); } catch(e){}
+  const { captured, extra } = commitBattle(win);
+  const enemyName = (MONSTERS[CUR.enemyId] || {}).name || "???";
+  const el = document.getElementById("resolve");
+  document.getElementById("resolveTitle").textContent = win ? (captured ? "CAPTURED!" : "VICTORY!") : "DEFEAT…";
+  document.getElementById("resolveMonster").src = spritePath(CUR.enemySprite);   // repo-relative
+  document.getElementById("resolveSub").innerHTML = win
+    ? (captured
+        ? "You captured " + enemyName + "! Your rhythm tamed the beast." + extra
+        : "You defeated " + enemyName + "!" + extra + " Type faster to capture it next time.")
+    : "The enemy wore you down. Keep the beat — every dodge counts.";
+  document.getElementById("againBtn").textContent = "Return to World";
+  el.classList.add("on");
+  musicStop();
+  console.log("[typemon] resolve: " + document.getElementById("resolveTitle").textContent + " node=" + CUR.nodeId);
+  if (AUTOPLAY){
+    const save = loadSave(store).state;
+    stLine(win, "AT1 battle win resolves", document.getElementById("resolveTitle").textContent);
+    stLine(!!save && save.collection.length >= 1, "AT7 save written", save ? ("mons=" + save.collection.length + " active=" + save.activeMonsterId) : "no-save");
+    const xp = save ? save.collection.reduce((a, m) => a + m.xp, 0) : 0;
+    stLine(win ? xp > 0 : true, "AT1 xp committed", "total xp=" + xp);
+    stLine(!!save && save.route.cleared.includes(CUR.nodeId), "AT1 node cleared", save ? save.route.cleared.join(",") : "?");
+    stLine(document.querySelectorAll("#selftest div").length > 3, "AT12 no-reload (stage-A lines survived)");
+    stLine(!!window.__lastGate && !/FAIL/.test(window.__lastGate), "RG1 layout gate green", window.__lastGate);
+  }
+  // headless loop harness: follow the return path automatically
+  if (location.search.includes("autofight") || location.search.includes("autoplay")){
+    setTimeout(() => { if (S.phase === "resolve") returnToWorld(); }, 800);
+  }
+}
+/* Adapter teardown + return to world. Replaces location.reload(): the session
+   is destroyed (releases rawBus listeners; prevents keyboard double-fire on
+   re-entry) BEFORE the world renders. */
+function returnToWorld(){
+  if (session){ try { session.destroy(); } catch(e){} session = null; }
+  stopTick();
+  document.getElementById("resolve").classList.remove("on");
+  if (G) CUR.playerId = G.activeMonsterId;
+  const resume = G ? { mapId: G.route.mapId, row: G.route.row, col: G.route.col } : null;
+  showWorld();
+  console.log("[typemon] world-return: no reload, map=" + (G ? G.route.mapId + " R" + G.route.row + "C" + G.route.col : "?"));
+  if (AUTOPLAY){
+    stLine(document.getElementById("worldRoot").classList.contains("on"), "AT12 return to world, no reload");
+    stLine(!!resume && G.route.mapId === resume.mapId && G.route.row === resume.row && G.route.col === resume.col,
+      "AT12 same world position restored", resume ? resume.mapId + " R" + resume.row + "C" + resume.col : "?");
+    if (!window.__stSecond){
+      window.__stSecond = true;
+      setTimeout(() => { if (W.phase === "world") autoWalkIntoGrass(); }, 1000);   // AT13: re-enter, expect a fresh battle
+    } else {
+      setTimeout(() => {
+        if (W.phase === "world"){
+          openParty();
+          stLine(document.querySelectorAll("#partyRows .prow").length === G.collection.length, "AT10 party panel lists collection", document.querySelectorAll("#partyRows .prow").length + " rows");
+          stLine(document.querySelector("#partyRows .prow.active") !== null, "AT10 active mon marked");
+          closeParty();
+          stLine(!document.getElementById("partyPanel").classList.contains("on"), "AT10 party closes to world");
+        }
+        stSummary();
+      }, 1000);
+    }
+  }
+}
+
+/* ===================== WORLD LAYER (MVP Slice 3/4) =====================
+   Boot → starter/continue → rail → encounter → battle → resolve → world.
+   The battle machine itself is untouched; this layer only sets CUR (the
+   participant snapshot) and owns the world/party screens + save commits. */
+function spritePath(file){ return RP + "assets/ccbysa/opmons/" + file; }
+
+function bootCheckSave(){
+  const routeErrs = assertRoute(MONSTERS, ["background_grass.png", "background_cave.png"]);
+  console.log("[typemon] registry: " + (routeErrs.length ? "FAIL " + routeErrs.join(";") : "route ok, " + Object.keys(MONSTERS).length + " mons"));
+  const r = loadSave(store);
+  if (r.state){
+    G = { activeMonsterId: r.state.activeMonsterId, collection: r.state.collection, route: normalizeRoute(r.state.route) };
+    CUR.playerId = G.activeMonsterId;
+    document.getElementById("continueBtn").style.display = "inline-block";
+    console.log("[typemon] boot: save found, active=" + G.activeMonsterId + " at " + G.route.mapId + " R" + G.route.row + "C" + G.route.col);
+  } else if (r.reason && r.reason !== "no-save"){
+    console.warn("[typemon] boot: discarding save (" + r.reason + "), forcing New Game");
+  }
+}
+function newGame(){
+  document.getElementById("startScreen").style.display = "none";
+  renderStarter();
+  document.getElementById("starterRoot").classList.add("on");
+  W.phase = "starter";
+}
+function continueGame(){
+  if (!G) return newGame();
+  document.getElementById("startScreen").style.display = "none";
+  CUR.playerId = G.activeMonsterId;
+  showWorld();
+}
+function renderStarter(){
+  const box = document.getElementById("starterCards");
+  box.replaceChildren();
+  STARTER_IDS.forEach((id, i) => {
+    const m = MONSTERS[id];
+    const d = document.createElement("div");
+    d.className = "starterCard";
+    d.innerHTML = "<img alt=''><b>" + (i+1) + ". " + m.name + "</b><small>" + m.type + "<br>" + m.moves.map(x => x.name).join(" · ") + "</small>";
+    d.querySelector("img").src = spritePath(m.wild);
+    d.addEventListener("click", () => pickStarter(id));
+    box.appendChild(d);
+  });
+}
+function pickStarter(id){
+  if (W.phase !== "starter" || !MONSTERS[id]) return;
+  G = { activeMonsterId: id, collection: [makeOwned(MONSTERS[id], 0)], route: newRouteState() };
+  CUR.playerId = id;
+  persistBoot("boot-new-game");
+  document.getElementById("starterRoot").classList.remove("on");
+  showWorld();
+}
+function showWorld(){
+  document.getElementById("battleRoot").classList.remove("on");
+  document.getElementById("resolve").classList.remove("on");
+  document.getElementById("starterRoot").classList.remove("on");
+  document.getElementById("worldRoot").classList.add("on");
+  W.phase = "world";
+  worldView.fit();
+  renderWorld();
+  console.log("[typemon] world: map=" + G.route.mapId + " R" + G.route.row + "C" + G.route.col + " cleared=" + G.route.cleared.join(","));
+  if (AUTOPLAY && !window.__stWorld){
+    window.__stWorld = true;
+    const cvs = document.getElementById("worldCanvas");
+    stLine(!!cvs && cvs.width > 0 && cvs.height > 0, "AT12 world canvas rendered", cvs ? cvs.width + "x" + cvs.height : "none");
+    stLine(!!MAPS[G.route.mapId] && Number.isInteger(G.route.row) && Number.isInteger(G.route.col), "AT12 overworld map + player position", G.route.mapId + " R" + G.route.row + "C" + G.route.col);
+    stLine(/#worldHud/.test(document.body.innerHTML) && document.getElementById("worldCoords").textContent.length > 0, "AT12 world HUD coords live", document.getElementById("worldCoords").textContent);
+    stLine(/grass|clearing|Cave/i.test(document.getElementById("worldPrompt").textContent) || G.route.nodeIndex === 0, "AT12 world prompt guides", document.getElementById("worldPrompt").textContent);
+  }
+}
+function renderWorld(){
+  if (!G) return;
+  worldView.render(G.route);                      // canvas map + avatar (view owns pixels)
+  document.getElementById("worldPrompt").textContent = worldPromptFor();
+  const mapName = MAPS[G.route.mapId] ? MAPS[G.route.mapId].name : G.route.mapId;
+  document.getElementById("worldCoords").textContent =
+    mapName + " · R" + G.route.row + "C" + G.route.col + " · facing " + G.route.face;
+  const z = encounterZoneAt(G.route.mapId, G.route.row, G.route.col);
+  document.getElementById("worldGrass").textContent = z
+    ? ("Tall grass " + G.route.grassSteps + "/" + GRASS_THRESHOLD + " steps")
+    : "Tall grass \u2014 clear";
+  const a = activeOwned();
+  document.getElementById("worldParty").innerHTML = a
+    ? ("Active: <b>" + a.name + " Lv" + a.level + "</b> · Collection: <b>" + G.collection.length + "</b>")
+    : "";
+}
+function worldPromptFor(){
+  if (G.route.done) return "ROUTE COMPLETE! The cave boss is beaten. Press C to view your collection.";
+  const here = G.route;
+  const z = encounterZoneAt(here.mapId, here.row, here.col);
+  if (z){
+    const node = zoneToNode(z);
+    const cl = isNodeCleared(G.route, node) ? " (cleared \u2014 wilds still rustle here)" : "";
+    return "Tall grass" + cl + "! Keep walking to stir up a wild Typemon (" + here.grassSteps + "/" + GRASS_THRESHOLD + ").";
+  }
+  if (here.mapId !== "route_a") return "Stone Cave. Walk to the glowing rune at the far side to challenge the boss.";
+  const f = facingTile(here);
+  if (f.transition && f.transition.kind === "enter_cave") return "A dark cave mouth. Press Enter or Space to enter the Stone Cave.";
+  if (f.interact === "home") return "Your home clearing. The door is locked \u2014 head out into the world!";
+  return "Home clearing. Walk right (\u2192) along the path to the tall grass.";
+}
+// One grid step per accepted key action. Blocked moves still turn the avatar.
+function worldStep(dir){
+  if (W.phase !== "world" || !G) return;
+  const res = moveState(G.route, dir);
+  if (!res.moved){ G.route = res.state; renderWorld(); return; }
+  G.route = res.state;
+  if (res.dest && res.dest.boss){ startEncounter("cave"); return; }
+  if (res.dest && res.dest.zone){
+    const g = advanceGrass(G.route.grassSteps);
+    G.route = { ...G.route, grassSteps: g.steps };
+    if (g.trigger){ startEncounter(zoneToNode(res.dest.zone)); return; }
+  } else {
+    G.route = { ...G.route, grassSteps: 0 };
+  }
+  renderWorld();
+}
+// Enter / Space: act on the tile the avatar faces (cave transitions, home door).
+function worldInteract(){
+  if (W.phase !== "world" || !G) return;
+  const f = facingTile(G.route);
+  if (f.transition){
+    G.route = { ...G.route, ...applyTransition(G.route, f.transition), grassSteps: 0 };
+    persistBoot("transition");
+    console.log("[typemon] world: transition -> " + G.route.mapId + " R" + G.route.row + "C" + G.route.col);
+    renderWorld();
+    return;
+  }
+  if (f.interact === "home"){ renderWorld(); return; }
+  const p = document.getElementById("worldPrompt");
+  if (p) p.textContent = "Nothing to interact with here. Walk into the tall grass to find Typemon.";
+}
+// Start the modal battle for a route node. Deterministic candidate selection
+// (cycles the node's encounter list by encIndex) so the first test is reliable.
+function startEncounter(nodeId){
+  if (W.phase !== "world" || !G) return;
+  const node = ROUTE_A.nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  let enc;
+  if (node.boss){
+    enc = { ...node.boss, mode: "boss" };
+  } else {
+    enc = pickEncounterIndexed(node.encounters, G.route.encIndex);
+    if (!enc) return;
+    enc.mode = "wild";
+  }
+  if (!MONSTERS[enc.monId]) return;
+  G.route = { ...G.route, encIndex: G.route.encIndex + 1, grassSteps: 0 };
+  CUR.enemyId = enc.monId; CUR.enemyLevel = enc.level; CUR.enemyIsBoss = enc.mode === "boss";
+  CUR.enemySprite = CUR.enemyIsBoss ? MONSTERS[enc.monId].evolved : MONSTERS[enc.monId].wild;
+  CUR.nodeId = node.id;
+  CUR.bg = "battle_bkg/" + node.bg;
+  CUR.playerId = G.activeMonsterId;
+  persistBoot("encounter");                        // save the world position before the modal battle
+  beginBattle();
+}
+// Harness helper: place the avatar on a known tile (used by the boot/harness
+// walk only; real play moves tile-by-tile through worldStep).
+function placeWorld(mapId, row, col, face){
+  if (!G) return;
+  const sp = spawnFor(mapId);
+  G.route = { ...G.route, mapId: sp ? mapId : G.route.mapId, row, col, face, grassSteps: 0 };
+  if (W.phase === "world") renderWorld();
+}
+// Harness helper: walk north into the nearest tall-grass column until an
+// encounter fires (deterministic because grass triggers every 3rd step).
+function autoWalkIntoGrass(){
+  if (W.phase !== "world" || !G) return;
+  placeWorld("route_a", 4, 12, "up");     // one tile south of tall grass A
+  let n = 0;
+  const t = setInterval(() => {
+    if (W.phase !== "world" || n++ > 4){ clearInterval(t); return; }
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+  }, 130);
+}
+function openParty(){
+  if (!G || W.phase !== "world") return;
+  W.phase = "party";
+  renderParty();
+  document.getElementById("partyPanel").classList.add("on");
+}
+function renderParty(){
+  const rows = document.getElementById("partyRows");
+  rows.replaceChildren();
+  G.collection.forEach((m, i) => {
+    const d = document.createElement("div");
+    d.className = "prow" + (m.id === G.activeMonsterId ? " active" : "");
+    d.innerHTML = "<span class=\"k\">" + (i+1) + "</span><img alt=''><div><b>" + m.name + " Lv" + m.level + "</b><small>XP " + m.xp + " · " + m.moves.map(x => x.name).join(" · ") + "</small></div>";
+    d.querySelector("img").src = spritePath(MONSTERS[m.id].wild);
+    d.addEventListener("click", () => partySwitch(m.id));
+    rows.appendChild(d);
+  });
+}
+function partySwitch(id){
+  if (W.phase !== "party") return;
+  const r = switchActive(G.collection, G.activeMonsterId, id);
+  if (!r.ok) return;
+  G.activeMonsterId = r.activeId;
+  CUR.playerId = r.activeId;
+  persistBoot("switch");
+  renderParty();
+}
+function closeParty(){
+  document.getElementById("partyPanel").classList.remove("on");
+  if (W.phase === "party"){ W.phase = "world"; renderWorld(); }
+}
+/* Battle entry (gesture-gated audio init on first call only; ctx reused after).
+   Participants come from CUR; no session exists until the first move choice
+   (the index.html:866-870 menu-first pattern is preserved). */
+async function beginBattle(){
+  document.getElementById("worldRoot").classList.remove("on");
+  document.getElementById("starterRoot").classList.remove("on");
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("resolve").classList.remove("on");
+  document.getElementById("battleRoot").classList.add("on");
+  W.phase = "battle";   // shell phase: world keys are dead while the modal battle is up
+
+  // gesture gate: init + resume AudioContext on first battle (autoplay fix)
+  if (!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try { await audioCtx.resume(); } catch(e) {}
+  }
+  // never carry a session into a fresh battle
+  if (session){ try { session.destroy(); } catch(e){} session = null; }
+
+  // full-HP start every battle (Decision 4); reset all per-battle state
+  S.combo = 0; S.playerHp = CFG.playerMaxHp; S.enemyHp = CFG.enemyMaxHp;
+  S.captured = false; S.roundIndex = 0; S.sessionDone = false; S.currentMove = null; S.pendingText = "";
+
+  // load sprites (fast, no audio dependency)
+  monsterImgs[CUR.playerId] = await loadImg("assets/ccbysa/opmons/" + MONSTERS[CUR.playerId].wild);
+  monsterImgs[CUR.enemyId]  = await loadImg("assets/ccbysa/opmons/" + CUR.enemySprite);
+  for (const b of ["battle_bkg/background_grass.png", "battle_bkg/background_cave.png"]){
+    if (!imgs[b]) imgs[b] = await loadImg("assets/ccbysa/" + b);
+  }
+  const p = activeOwned() || makeOwned(MONSTERS[CUR.playerId], 0);
+  document.getElementById("playerFace").src = spritePath(MONSTERS[CUR.playerId].wild);   // repo-relative
+  document.getElementById("enemyFace").src  = spritePath(CUR.enemySprite);
+  document.getElementById("playerName").textContent = p.name + " Lv" + p.level;
+  document.getElementById("enemyName").textContent = MONSTERS[CUR.enemyId].name + " Lv" + CUR.enemyLevel + (CUR.enemyIsBoss ? " BOSS" : "");
+
+  // typing content: real words, shuffled per battle — one word per round (D)
+  // words.json sits NEXT TO index.html — relative fetch works at server root
+  // AND under GH Pages subpath (demo/), unlike an absolute /demo/ path.
+  const wordPool = await (await fetch("words.json")).json();
+  S.roundWords = [];
+  for (let i=0;i<ROUND_BUDGET;i++) S.roundWords.push(wordPool.words[Math.floor(Math.random()*wordPool.words.length)]);
+  S.roundIndex = 0;
+  document.getElementById("roundCounter").textContent = "ATTACK 1/" + S.roundWords.length;
+  // Full theme: FeedbackLayer does NOT deep-merge, so spread DEFAULT_THEME and
+  // overlay only the battle palette (missing fields would break rendering).
+  const battleTheme = {
+    ...DEFAULT_THEME,
+    name: "typemon-battle",
+    colors: {
+      ...DEFAULT_THEME.colors,
+      primary: "#e94560", secondary: "#ffd166", tertiary: "#06d6a0",
+      danger: "#ff1744", surface: "#141a33", keycap: "#16213e",
+    },
+  };
+  window.__typemonTheme = battleTheme;   // reused by closeMenu for round rebuilds
+  // NO session yet — the battle waits for the first attack choice (user's fix:
+  // menu FIRST, word plays only after choosing FIGHT).
+  S.phase = "intro";
+  for (const id of ["cPerfect","cGreat","cGood","cMiss"]) document.getElementById(id).textContent = "0";
+  setHpBars();
+  openMenu();                                // first menu: FIGHT / CAPTURE immediately
+  if (AUTOPLAY){
+    const n = (window.__stBattles = (window.__stBattles || 0) + 1);
+    stLine(S.playerHp === CFG.playerMaxHp && S.enemyHp === CFG.enemyMaxHp, "AT13 fresh full-HP battle #" + n, S.playerHp + "/" + S.enemyHp);
+    stLine((MOVE_DB[CUR.playerId] || []).length === 3, "AT1 battle uses owned mon moveset", CUR.playerId + "=" + (MOVE_DB[CUR.playerId] || []).map(m => m.name).join(","));
+    stLine(/Lv\d/.test(document.getElementById("playerName").textContent), "AT10 HUD shows active mon level", document.getElementById("playerName").textContent);
+  }
+
+  // music loads in PARALLEL — battle never blocks on audio; degrades to silent
+  startMusic().catch(() => console.warn("audio unavailable — battle runs silent"));
+  console.log("[typemon] battle: " + p.name + " vs " + MONSTERS[CUR.enemyId].name + (CUR.enemyIsBoss ? " (boss)" : ""));
+}
+async function startMusic(){
+  const arr = await (await fetch(RP + CFG.track)).arrayBuffer();   // repo-relative
+  const buf = await audioCtx.decodeAudioData(arr);
+  musicSrc = audioCtx.createBufferSource();
+  musicSrc.buffer = buf; musicSrc.loop = true;
+  musicSrc.connect(audioCtx.destination);
+  musicSrc.start();
+  // audio is now running: re-anchor timing to the audio clock start
+  if (session) session.judge.setStartTime(performance.now());
+}
+function buildContent(n){
+  let s = "";
+  for (let i=0;i<n;i++) s += KEYS[i % KEYS.length];
+  return s;
+}
+function buildPhrase(pool, wordCount){
+  // random words, joined with spaces — BeatMapGenerator keeps spaces as notes,
+  // so the inter-word pause is structural (500ms at 120 BPM)
+  const out = [];
+  for (let i=0;i<wordCount;i++) out.push(pool[Math.floor(Math.random()*pool.length)]);
+  return out.join(" ");
+}
+function musicStop(){ try { musicSrc && musicSrc.stop(); } catch(e){} }
+
+/* ===================== MENU KEYS (plugin-owned listener) =====================
+   Phase-scoped InputRouter: battle menu keys only while the battle is up;
+   starter/world/party keys only in their shell phases. */
+document.addEventListener("keydown", (e) => {
+  if (S.phase === "menu" && document.getElementById("battleRoot").classList.contains("on")){
+    if (e.key === "1") menuChoice("m0");
+    else if (e.key === "2") menuChoice("m1");
+    else if (e.key === "3") menuChoice("m2");
+    else if (e.key === "4") menuChoice("capture");
+    return;
+  }
+  if (W.phase === "starter"){
+    if (e.key >= "1" && e.key <= String(STARTER_IDS.length)){
+      const id = STARTER_IDS[parseInt(e.key, 10) - 1];
+      if (id) pickStarter(id);
+    }
+    return;
+  }
+  if (W.phase === "party"){
+    if (e.key === "Escape" || e.key === "c" || e.key === "C"){ closeParty(); return; }
+    const n = parseInt(e.key, 10);
+    if (G && n >= 1 && n <= G.collection.length) partySwitch(G.collection[n-1].id);
+    return;
+  }
+  if (W.phase === "world"){
+    let handled = true;
+    if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") worldStep("up");
+    else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") worldStep("down");
+    else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") worldStep("left");
+    else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") worldStep("right");
+    else if (e.key === "Enter" || e.key === " ") worldInteract();
+    else if (e.key === "c" || e.key === "C") openParty();
+    else handled = false;
+    if (handled) e.preventDefault();
+  }
+});
+// Verification surface (CDP): read-only world state + real input helpers.
+window.__world = {
+  state: () => (G ? {
+    phase: W.phase, mapId: G.route.mapId, row: G.route.row, col: G.route.col,
+    face: G.route.face, grassSteps: G.route.grassSteps, encIndex: G.route.encIndex,
+    done: G.route.done, cleared: G.route.cleared.slice(),
+  } : null),
+  step: (d) => worldStep(d),
+  interact: () => worldInteract(),
+  place: (mapId, row, col, face) => placeWorld(mapId, row, col, face),
+  maps: () => Object.keys(MAPS),
+};
+document.querySelectorAll(".menuKey").forEach(el => {
+  el.addEventListener("click", () => menuChoice(el.dataset.menu));
+});
+
+/* ===================== MAIN LOOP ===================== */
+let last = performance.now();
+function main(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (S.phase === "battle" || S.phase === "intro" || S.phase === "menu" || S.phase === "resolve"){
+    drawBattle(dt, session ? session.songTime() : 0);
+  }
+  requestAnimationFrame(main);
+}
+requestAnimationFrame(main);
+
+document.getElementById("startBtn").addEventListener("click", newGame);
+document.getElementById("continueBtn").addEventListener("click", continueGame);
+document.getElementById("againBtn").addEventListener("click", returnToWorld);
+// AT8 harness: seed a corrupt save BEFORE boot reads it (?corruptsave=1).
+if (location.search.includes("corruptsave")){ try { localStorage.setItem("typemon.save.v1", "{garbage"); } catch(e){} }
+bootCheckSave();
+if (location.search.includes("corruptsave")){
+  document.getElementById("selftest").classList.add("on");
+  setTimeout(() => {
+    const forced = document.getElementById("continueBtn").style.display !== "inline-block";
+    stLine(forced, "AT8 corrupt save forces New Game, no crash");
+    stLine(W.phase === "starter" || W.phase === "title", "AT8 boot lands on title/starter", W.phase);
+  }, 1500);
+}
+
+// headless verification hook: ?autostart=1 boots past the title after assets ready
+// (?autoplay=1 implies the same boot path plus the loop harness below.)
+if (location.search.includes("autostart") || location.search.includes("autoplay")){
+  setTimeout(() => {
+    if (W.phase === "title") (G ? document.getElementById("continueBtn") : document.getElementById("startBtn")).click();
+    setTimeout(() => {
+      if (W.phase === "starter") pickStarter("1");
+      // ?autostart&autofight (?autoplay implies both): walk into tall grass and enter (once per load)
+      if ((location.search.includes("autofight") || location.search.includes("autoplay")) && W.phase === "world" && !window.__autoEntered && G){
+        window.__autoEntered = true;
+        autoWalkIntoGrass();
+      }
+    }, 400);
+  }, 300);
+}
+// ?human=1: types the word at a NATURAL child pace (irregular 600-1200ms gaps),
+// polling so it keeps acting across phases. Dispatches on DOCUMENT (real path).
+if (location.search.includes("human")){
+  function fireKey(k){ document.dispatchEvent(new KeyboardEvent("keydown", {key:k})); document.dispatchEvent(new KeyboardEvent("keyup", {key:k})); }
+  setInterval(() => {
+    if (S.phase === "menu"){ fireKey("1"); return; }
+    if (S.phase !== "battle") return;
+    const expected = session && session.judge.getExpectedNote();
+    if (!expected) return;
+    fireKey(expected.key);
+  }, 700 + Math.random()*500);   // natural irregular human pace ~0.7-1.2s per letter
+}
+
+// ?autofight=1 presses FIGHT (menu key 1) when the menu opens, then simulates typing
+// (?autoplay=1 implies the same simulator for the loop harness.)
+if (location.search.includes("autofight") || location.search.includes("autoplay")){
+  const iv = setInterval(() => {
+    if (S.phase === "menu") { document.dispatchEvent(new KeyboardEvent("keydown", {key:"1"})); }
+    else if (S.phase === "battle"){
+      const expected = session && session.judge.getExpectedNote();
+      if (expected){
+        // ring-aware: only press when the note is IN its window — simulates a human
+        // waiting for the approach ring, not a fixed cadence that gets early-guarded
+        const noteTime = expected.time;
+        const songTime = session.judge.getSongTime();
+        const delta = songTime - noteTime;
+        const isLast = session.judge.state.cursor >= session.judge.beatMap.length - 1;
+        // ?latemiss=1: on the LAST letter, STOP the sim and let the window lapse
+        // (no press at all) — tick marks it stale, cursor completes, nextRound fires.
+        if (location.search.includes("latemiss") && isLast){
+          clearInterval(iv);
+        } else if (delta > -200){   // press when the ring has nearly landed
+          document.dispatchEvent(new KeyboardEvent("keydown", {key: expected.key}));
+          document.dispatchEvent(new KeyboardEvent("keyup", {key: expected.key}));
+        }
+      }
+    }
+  }, 120);  // fast poll, presses only in-window
+}
+
+/* ===================== AUTOPLAY LOOP HARNESS (Slice 5) =====================
+   ?autoplay=1 implies the autostart boot + autofight battle above, and asserts
+   the full loop into #selftest (also mirrored to console as [typemon-selftest]).
+   Stage A runs at boot; stages B/C fire from showWorld/beginBattle/resolve/
+   returnToWorld above. A surviving stage-A line at resolve time proves no page
+   reload happened mid-loop (reload would wipe DOM-only lines). */
+const AUTOPLAY = location.search.includes("autoplay");
+function stLine(ok, name, detail){
+  const box = document.getElementById("selftest");
+  const d = document.createElement("div");
+  d.textContent = (ok ? "PASS " : "FAIL ") + name + (detail ? " :: " + detail : "");
+  box.appendChild(d);
+  console.log("[typemon-selftest] " + d.textContent);
+}
+function stSummary(){
+  const rows = [...document.querySelectorAll("#selftest div")].map(x => x.textContent);
+  const fails = rows.filter(x => x.indexOf("FAIL ") === 0).length;
+  document.title = (fails ? "AUTOPLAY-FAIL " : "AUTOPLAY-DONE ") + (rows.length - fails) + "/" + rows.length;
+  console.log("[typemon-selftest] SUMMARY " + document.title);
+}
+if (AUTOPLAY){
+  document.getElementById("selftest").classList.add("on");
+  setTimeout(() => {
+    stLine(Object.keys(MONSTERS).length === 8, "AT0 registry holds 8 mons");
+    stLine(assertRoute(MONSTERS, ["background_grass.png", "background_cave.png"]).length === 0, "AT0 route_a valid");
+    const parity = ["EMBER", "TACKLE", "GUST"].every((n, i) => MOVE_DB["1"][i].name === n)
+      && ["STONE", "SHIELD", "QUAKE"].every((n, i) => MOVE_DB["53"][i].name === n);
+    stLine(parity, "RG0 move parity vs demo literal (1/53)");
+    stLine(CFG.captureThreshold === 30 && CFG.enemyDamage === 8, "RG0 formulas frozen (threshold 30, enemy 8)");
+  }, 500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Typemon — repo hygiene (structural, not aspirational)
+
+# ---- provenance-dead OpMon audio (ship:false in tracks.json) ----
+# CC-BY-SA attribution unfillable (no composer credit survived repo history).
+# These NEVER enter git history — a file that never exists in history
+# cannot be resurrected by force-push or shallow-clone edge.
+assets/ccbysa/audio/mysterioucity.ogg
+assets/ccbysa/audio/route14.ogg
+assets/ccbysa/audio/wildbattle.ogg
+
+# ---- test material (unvetted, dev-only) ----
+spike/test-audio/
+
+# ---- OS / editor noise ----
+.DS_Store
