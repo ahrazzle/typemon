@@ -174,10 +174,17 @@ export function isWalkable(mapId, row, col) {
   return !!(def && def.walkable);
 }
 
-// Encounter zone for a tile ("grass_a" | "grass_b" | null).
+// Encounter zone for a tile ("grass_a" | "grass_b" | "grass_c" | "grass_d" | null).
+// Ember Ridge carries its own higher-level tables: its "," / ";" tall-grass
+// tiles remap from the Route A zones to grass_c / grass_d.
 export function encounterZoneAt(mapId, row, col) {
   const def = tileDefAt(mapId, row, col);
-  return (def && def.zone) || null;
+  const zone = (def && def.zone) || null;
+  if (zone && mapId && mapId.startsWith("ridge")) {
+    if (zone === "grass_a") return "grass_c";
+    if (zone === "grass_b") return "grass_d";
+  }
+  return zone;
 }
 
 // Boss tile?

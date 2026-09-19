@@ -962,11 +962,7 @@ function startTick(){
     if (!ticking) return;
     const st = session.judge.state;
     if (S.phase === "battle" && !st.isComplete){
-      const before = st.cursor;
-      session.judge.tick();                  // fires onNoteStale for expired notes
-      if (session.judge.state.cursor > before){
-        enemyAttack("stale");
-      }
+      session.judge.tick();                  // fires onNoteStale for expired notes (it owns the enemy attack)
     }
     // ONE convergence point: every completion path (hit/miss/stale) lands here.
     // Re-read state AFTER tick — tick() mutates the cursor, so a pre-tick capture
@@ -1645,7 +1641,8 @@ async function beginBattle(){
   // typing content: real words, shuffled per battle — one word per round (D)
   // words.json sits NEXT TO index.html — relative fetch works at server root
   // AND under GH Pages subpath (demo/), unlike an absolute /demo/ path.
-  const wordPool = await (await fetch("words.json")).json();
+  // (sync-root-index.mjs rewrites this to demo/words.json for the root page.)
+  const wordPool = await (await fetch("demo/words.json")).json();
   S.roundWords = [];
   for (let i=0;i<ROUND_BUDGET;i++) S.roundWords.push(wordPool.words[Math.floor(Math.random()*wordPool.words.length)]);
   S.roundIndex = 0;

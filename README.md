@@ -109,7 +109,7 @@ http://localhost:8000/demo/index.html?autoplay=1
 ```
 
 It walks world -> encounter -> victory -> XP/save -> node-clear -> world -> a
-second battle and reports `AUTOPLAY-DONE 33/33` with no failures — useful as a
+second battle and reports `AUTOPLAY-DONE 37/37` with no failures — useful as a
 served-surface check after any deploy.
 
 ---

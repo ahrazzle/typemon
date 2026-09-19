@@ -35,6 +35,8 @@ export const RIDGE = {
 };
 
 // Unified encounter-table lookup across Route A and Ember Ridge.
+// Accepts a zone ("grass_a".."grass_d") or a ridge node id ("ridge_c"/"ridge_d";
+// zoneToNode() maps ridge zones to those ids, so both spellings resolve).
 // Returns { encounters, bg, label, nodeId } or null for unknown zones.
 export function zoneTable(zone) {
   if (!zone) return null;
@@ -42,7 +44,7 @@ export function zoneTable(zone) {
   if (node && node.encounters) {
     return { encounters: node.encounters, bg: node.bg, label: node.label, nodeId: node.id };
   }
-  const z = RIDGE.zones[zone];
+  const z = RIDGE.zones[zone] || Object.values(RIDGE.zones).find((zz) => zz.nodeId === zone);
   if (z) return { encounters: z.encounters, bg: z.bg, label: z.label, nodeId: z.nodeId };
   return null;
 }

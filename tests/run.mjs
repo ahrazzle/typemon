@@ -200,6 +200,13 @@ for (const ch of ["~", "o", "X", "B", "T"]) t("ow.cave has tile " + ch, flatC.in
 t("ow.tallgrass zones distinct", encounterZoneAt("route_a", 1, 12) === "grass_a" && encounterZoneAt("route_a", 12, 5) === "grass_b");
 t("ow.zoneToNode", zoneToNode("grass_a") === "grass_a" && zoneToNode("grass_b") === "grass_b" && zoneToNode("x") === null);
 t("ow.zoneToNode ridge", zoneToNode("grass_c") === "ridge_c" && zoneToNode("grass_d") === "ridge_d");
+// ridge grass remaps to the ridge tables end to end: tile -> zone -> node -> table
+const rzC = encounterZoneAt("ridge_a", 1, 1), rzD = encounterZoneAt("ridge_a", 1, 13);
+t("ow.ridge grass zones", rzC === "grass_c" && rzD === "grass_d", { rzC, rzD });
+const rTab = zoneTable(zoneToNode(rzC));
+t("ow.ridge grass encounter", rTab && rTab.nodeId === "ridge_c" && rTab.encounters[0].monId === "6" && rTab.encounters[0].level === 4, rTab && rTab.nodeId);
+const rTabD = zoneTable(zoneToNode(rzD));
+t("ow.ridge grass encounter d", rTabD && rTabD.nodeId === "ridge_d" && rTabD.encounters[0].level === 5, rTabD && rTabD.nodeId);
 const spA = spawnFor("route_a");
 t("ow.spawn walkable", isWalkable("route_a", spA.row, spA.col), spA);
 const s0 = { mapId: "route_a", row: 5, col: 3, face: "right" };

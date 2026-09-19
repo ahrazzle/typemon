@@ -1641,6 +1641,7 @@ async function beginBattle(){
   // typing content: real words, shuffled per battle — one word per round (D)
   // words.json sits NEXT TO index.html — relative fetch works at server root
   // AND under GH Pages subpath (demo/), unlike an absolute /demo/ path.
+  // (sync-root-index.mjs rewrites this to demo/words.json for the root page.)
   const wordPool = await (await fetch("words.json")).json();
   S.roundWords = [];
   for (let i=0;i<ROUND_BUDGET;i++) S.roundWords.push(wordPool.words[Math.floor(Math.random()*wordPool.words.length)]);
