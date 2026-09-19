@@ -111,6 +111,19 @@
            font-size:16px; font-weight:700; color:var(--text); cursor:pointer; transition:border-color .12s, transform .12s;}
   .menuKey:hover{border-color:var(--coral); transform:translateY(-2px);}
   .menuKey .k{color:var(--coral); font-weight:900; margin-right:8px;}
+  .menuKey.disabled{opacity:.35; cursor:default;}
+  .menuKey.disabled:hover{border-color:var(--line); transform:none;}
+  .menuKey .sub{display:block; font-size:11px; color:var(--dim); font-weight:400; margin-top:2px;}
+  /* dialog overlay (NPCs + signs) */
+  #dialog{position:fixed; inset:0; z-index:55; display:none; align-items:flex-end; justify-content:center;
+          pointer-events:none;}
+  #dialog.on{display:flex;}
+  #dialogBox{pointer-events:auto; width:min(680px, 92vw); margin-bottom:48px; background:var(--card);
+             border:2px solid var(--line); border-radius:14px; padding:18px 22px; cursor:pointer;}
+  #dialogName{color:var(--gold); font-weight:900; letter-spacing:1px; margin-bottom:8px; font-size:14px;}
+  #dialogText{color:var(--text); font-size:17px; line-height:1.65; min-height:56px;}
+  #dialogHint{color:var(--dim); font-size:12px; text-align:right; margin-top:10px;}
+  #dialogHint b{color:var(--coral);}
   /* resolve overlay */
   #resolve{position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
            flex-direction:column; gap:18px; background:rgba(11,14,26,.88); backdrop-filter:blur(8px); text-align:center;}
@@ -199,6 +212,13 @@
 </div>
 
 <!-- ============ OVERWORLD (walkable Route A) ============ -->
+<div id="dialog">
+  <div id="dialogBox">
+    <div id="dialogName"></div>
+    <div id="dialogText"></div>
+    <div id="dialogHint">Press <b>Enter</b> or <b>Space</b> to continue ▸</div>
+  </div>
+</div>
 <div id="worldRoot">
   <canvas id="worldCanvas"></canvas>
   <div id="worldHud">
@@ -251,12 +271,7 @@
     <span class="cnt mid">GOOD <b id="cGood">0</b></span>
     <span class="cnt bad">MISS <b id="cMiss">0</b></span>
   </div>
-  <div id="menuBar">
-    <div class="menuKey" data-menu="m0"><span class="k">1</span><span class="moveName">EMBER</span></div>
-    <div class="menuKey" data-menu="m1"><span class="k">2</span><span class="moveName">TACKLE</span></div>
-    <div class="menuKey" data-menu="m2"><span class="k">3</span><span class="moveName">GUST</span></div>
-    <div class="menuKey" data-menu="capture"><span class="k">4</span>CAPTURE</div>
-  </div>
+  <div id="menuBar"></div>
   <div id="typejoyWrap"></div>
   <div id="resolve">
     <h2 id="resolveTitle"></h2>
@@ -266,14 +281,18 @@
   </div>
 </div>
 
-<script src="demo/vendor/typejoy.js" type="module"></script>
+<script src="vendor/typejoy.js" type="module"></script>
 <script type="module">
 "use strict";
 import { createSession, DEFAULT_THEME } from "./demo/vendor/typejoy.js";
-import { MONSTERS, ROUND_BUDGET, STARTER_IDS, assertRegistry } from "./src/data/monsters.js";
+import { MONSTERS, ROUND_BUDGET, STARTER_IDS, TYPE_MULT, assertRegistry } from "./src/data/monsters.js";
 import { ROUTE_A, assertRoute } from "./src/data/route_a.js";
+import { RIDGE, zoneTable, assertRidge } from "./src/data/ridge.js";
+import { NPCS, SIGNS, npcAt, signAt, isTrainer, trainerFlag, isTrainerDefeated, assertNpcs } from "./src/data/npcs.js";
+import { TYPE_CHART, effectiveness, effectivenessLabel, assertChart } from "./src/data/types.js";
+import { ITEM_DEFS, STARTER_ITEMS, countItem, normalizeItems, addItem, useItem, assertItems } from "./src/domain/items.js";
 import { commitNodeClear, isNodeCleared } from "./src/domain/world.js";
-import { makeOwned, addCapture, switchActive, getActive, awardXp } from "./src/domain/collection.js";
+import { makeOwned, addCapture, switchActive, getActive, awardXp, levelForXp } from "./src/domain/collection.js";
 import { saveGame, loadSave } from "./src/domain/persistence.js";
 import {
   MAPS, GRASS_THRESHOLD, moveState, advanceGrass, applyTransition, facingTile,
@@ -293,7 +312,7 @@ import { createWorldView } from "./src/view/world_view.js";
 // dev server (127.0.0.1:8770/demo/) AND GH Pages subpath (/repo/demo/), because
 // assets/ is always a sibling of demo/. NEVER use a leading "/" — that breaks
 // on the GH Pages subpath (the class of bug we keep catching).
-const RP = "";
+const RP = "./";
 
 const CFG = {
   player:  { id: "1",  name: "HOPLING", sprite: "assets/ccbysa/opmons/1-0.png" },
@@ -319,13 +338,36 @@ const KEYS = "asdfjk";                            // home-row letters for young 
    identical to the original literal. */
 const MOVE_DB = {};
 for (const id of Object.keys(MONSTERS)) MOVE_DB[id] = MONSTERS[id].moves;
-const TYPE_MULT = {
-  BURNING: 1.3, LIQUID: 1.2, GROUND: 1.2, ELECTRON: 1.25, FIGHT: 1.15,
-  MENTAL: 1.1, DRAGON: 1.35, COLD: 1.2, BUG: 1.05, VEGETAL: 1.0,
-  GHOST: 1.1, MAGIC: 1.15, METAL: 1.15, MINERAL: 1.2, TOXIC: 1.1,
-  SKY: 1.05, NEUTRAL: 1.0, BAD: 1.0,
-};
 const TIMING_MULT = { perfect: 1.5, great: 1.0, good: 0.75 };
+// STAB: same-type attack bonus, an original Typemon tuning constant.
+const STAB_MULT = 1.25;
+
+// ---- battle math --------------------------------------------------------
+// Player: letters × move-type × timing × effectiveness × STAB.
+// Enemy:  letters × move-type × effectiveness × STAB × level scale.
+// (effectiveness and STAB come from src/data; this shell only multiplies.)
+function playerDamage(mv, judgment, playerType, enemyType){
+  const letters = mv ? mv.letters : 5;
+  const typeMult = mv ? (TYPE_MULT[mv.type] || 1) : 1;
+  const timingMult = TIMING_MULT[judgment] || 1;
+  const eff = mv ? effectiveness(mv.type, enemyType) : 1;
+  const stab = mv && mv.type === playerType ? STAB_MULT : 1;
+  return { dmg: Math.max(3, Math.round(letters * typeMult * timingMult * eff * stab)), eff };
+}
+// The enemy cycles its 3 moves in order — a readable, fair opponent.
+function enemyMove(){
+  const moves = MOVE_DB[CUR.enemyId] || MOVE_DB["53"];
+  const mv = moves[S.enemyMoveIdx % moves.length];
+  S.enemyMoveIdx++;
+  return mv;
+}
+function enemyDamage(mv, enemyType, playerType){
+  const typeMult = TYPE_MULT[mv.type] || 1;
+  const eff = effectiveness(mv.type, playerType);
+  const stab = mv.type === enemyType ? STAB_MULT : 1;
+  const scale = 0.55 + 0.15 * CUR.enemyLevel;
+  return { dmg: Math.max(2, Math.round(mv.letters * typeMult * eff * stab * scale)), eff };
+}
 
 // ---- assets -------------------------------------------------------------
 const imgs = {};
@@ -355,6 +397,10 @@ const S = {
   roundIndex: 0,
   sessionDone: false,
   currentMove: null,        // move system: the selected move being typed
+  menuMode: "main",         // main | switch | bag (battle submenus)
+  enemyMoveIdx: 0,          // enemy cycles its 3 moves in order
+  slowNext: false,          // SLOW DIAL armed: next word ticks at lower bpm
+  trainerNext: false,        // trainer sends their next Typemon after this resolve
 };
 
 /* ===================== WORLD GAME STATE (MVP Slice 3/4) =====================
@@ -370,16 +416,20 @@ const CUR = {
   enemySprite: "53-0.png",
   nodeId: null,
   bg: "battle_bkg/background_grass.png",
+  mode: "wild",             // wild | boss | trainer
+  trainerId: null,
+  team: null,               // trainer team array, or null
+  teamIdx: 0,
 };
 let G = null;
-const W = { phase: "title" };
+const W = { phase: "title", againAction: null };   // againAction: null | "trainerNext" | "trainerWin"
 const store = {
   getItem: (k) => { try { return localStorage.getItem(k); } catch(e){ return null; } },
   setItem: (k, v) => { try { localStorage.setItem(k, v); } catch(e){} },
 };
 function activeOwned(){ return G ? getActive(G.collection, G.activeMonsterId) : null; }
 function persistBoot(reason){
-  const ok = G ? saveGame(store, { activeMonsterId: G.activeMonsterId, collection: G.collection, route: G.route }) : false;
+  const ok = G ? saveGame(store, { activeMonsterId: G.activeMonsterId, collection: G.collection, route: G.route, items: G.items }) : false;
   console.log("[typemon] save (" + reason + "): " + (ok ? "ok" : "FAILED"));
   return ok;
 }
@@ -392,7 +442,7 @@ const worldView = createWorldView(document.getElementById("worldCanvas"));
 function newRouteState(){
   const s = spawnFor("route_a");
   return {
-    routeId: "route_a", nodeIndex: 0, cleared: [], flags: {}, done: false,
+    routeId: "route_a", nodeIndex: 0, cleared: [], flags: {}, done: false, gameComplete: false,
     mapId: s.mapId, row: s.row, col: s.col, face: s.face, grassSteps: 0, encIndex: 0,
   };
 }
@@ -720,17 +770,8 @@ setInterval(assertLayout, 2000);
 function openMenu(){
   S.phase = "menu";
   if (session) session.judge.detach();         // no keystroke can reach timing judgment
-  // render the player's move set into the menu (CAPTURE stays on 4)
-  const moves = MOVE_DB[CUR.playerId] || MOVE_DB["1"];
-  const keys = document.querySelectorAll("#menuBar .menuKey[data-menu^='m']");
-  keys.forEach((el, i) => {
-    const mv = moves[i];
-    if (mv){
-      el.style.display = "flex";
-      const nm = el.querySelector(".moveName");
-      if (nm) nm.textContent = mv.name;
-    } else el.style.display = "none";
-  });
+  S.menuMode = "main";
+  renderMenu();
   document.getElementById("menuBar").classList.add("on");
   // Position the menu ABOVE the HUD (measured live) so it can never overlap the
   // HP/name bar regardless of viewport. bottom offset = hudTop gap from bottom.
@@ -738,6 +779,49 @@ function openMenu(){
   const menu = document.getElementById("menuBar");
   menu.style.bottom = Math.max(120, Math.round(innerHeight - hudRect.top + 16)) + "px";
   stopTick();
+}
+// Battle menu, rendered per mode: main (3 moves + capture/switch/bag),
+// switch (party list), bag (usable items). Esc or 0 returns to main.
+function renderMenu(){
+  const bar = document.getElementById("menuBar");
+  bar.innerHTML = "";
+  const add = (key, label, sub, action, disabled) => {
+    const el = document.createElement("div");
+    el.className = "menuKey" + (disabled ? " disabled" : "");
+    el.innerHTML = '<span class="k">' + key + "</span>" + label +
+      (sub ? '<span class="sub">' + sub + "</span>" : "");
+    if (!disabled) el.addEventListener("click", () => menuChoice(action));
+    bar.appendChild(el);
+  };
+  if (S.menuMode === "main"){
+    const moves = MOVE_DB[CUR.playerId] || MOVE_DB["1"];
+    moves.forEach((mv, i) => add(String(i + 1), '<span class="moveName">' + mv.name + "</span>", mv.type, "m" + i));
+    const canCapture = CUR.mode === "wild" && S.enemyHp > 0;
+    add("4", "CAPTURE", canCapture ? "snare the wild one" : "wild battles only", "capture", !canCapture);
+    add("5", "SWITCH", "swap Typemon — costs your turn", "switch");
+    add("6", "BAG", bagSummary(), "bag");
+  } else if (S.menuMode === "switch"){
+    G.collection.forEach((m, i) => {
+      const active = m.id === G.activeMonsterId;
+      add(String(i + 1), (active ? "▶ " : "") + m.name + " Lv" + m.level, active ? "in battle" : "send out", "s" + i, active);
+    });
+    add("0", "BACK", "return", "back");
+  } else if (S.menuMode === "bag"){
+    const ids = Object.keys(ITEM_DEFS).filter(id => countItem(G.items, id) > 0);
+    if (ids.length === 0){
+      add("–", "EMPTY", "visit Gramps in Ember Rest", "back");
+    } else {
+      ids.forEach((id, i) => {
+        const d = ITEM_DEFS[id];
+        add(String(i + 1), d.name + " ×" + countItem(G.items, id), d.desc, "b:" + id);
+      });
+      add("0", "BACK", "return", "back");
+    }
+  }
+}
+function bagSummary(){
+  const n = Object.keys(ITEM_DEFS).reduce((a, id) => a + countItem(G.items, id), 0);
+  return n > 0 ? n + " item" + (n > 1 ? "s" : "") : "empty — see Gramps";
 }
 function closeMenu(){
   document.getElementById("menuBar").classList.remove("on");
@@ -749,11 +833,12 @@ function closeMenu(){
     session = createSession({
       container: document.getElementById("typejoyWrap"),
       content: S.currentMove ? S.currentMove.name : S.roundWords[S.roundIndex],
-      bpm: CFG.bpm,
+      bpm: S.slowNext ? Math.max(30, CFG.bpm - 40) : CFG.bpm,  // SLOW DIAL: easier timing windows
       difficulty: CFG.difficulty,
       hooks,
       feedback: { theme: window.__typemonTheme },
     });
+    if (S.slowNext){ S.slowNext = false; showCombo("SLOWED!", 600); }
     hideTypejoyStats();
     sizeKeyboardToViewport();          // enlarge the framework keyboard band (supported surface)
     buildFeed(session.judge.beatMap);
@@ -781,20 +866,80 @@ function nextRound(){
   openMenu();
 }
 function menuChoice(n){
+  if (n === "back"){ S.menuMode = "main"; renderMenu(); return; }
+  if (n === "switch"){ S.menuMode = "switch"; renderMenu(); return; }
+  if (n === "bag"){ S.menuMode = "bag"; renderMenu(); return; }
   if (n === "capture"){ tryCapture(); return; }
+  if (n[0] === "s"){ doSwitch(parseInt(n.slice(1), 10)); return; }
+  if (n.startsWith("b:")){ useBagItem(n.slice(2)); return; }
   // move selection: set the current move; closeMenu creates the session with
   // the MOVE NAME as content — typing it IS the attack (through the judge)
   const moves = MOVE_DB[CUR.playerId] || MOVE_DB["1"];
   const mv = moves[parseInt(n.replace("m",""), 10)];
   if (!mv) return;
   S.currentMove = mv;
+  S.menuMode = "main";
   showCombo(mv.name + "!", 700);
   closeMenu();
 }
+// Mid-battle party switch: costs the turn — the enemy strikes first.
+function doSwitch(idx){
+  const m = G && G.collection[idx];
+  if (!m || m.id === G.activeMonsterId) return;
+  enemyAttack("switch");
+  if (S.phase !== "menu") return;   // the free attack fainted us — resolve took over
+  G.activeMonsterId = m.id;
+  CUR.playerId = m.id;
+  S.currentMove = null;
+  S.menuMode = "main";
+  document.getElementById("playerFace").src = spritePath(MONSTERS[m.id].wild);
+  document.getElementById("playerName").textContent = m.name + " Lv" + m.level;
+  showCombo("GO, " + m.name + "!", 900);
+  persistBoot("battle-switch");
+  renderMenu();
+}
+// Bag item use: TONIC heals, SLOW DIAL arms the next word, SNARE throws now.
+// Everything except arming the dial costs the turn (the enemy strikes first).
+function useBagItem(id){
+  if (id === "snare" && CUR.mode !== "wild"){ showCombo("Can't capture a trainer's Typemon!", 900); return; }
+  const r = useItem(G.items, id);
+  if (!r.ok){ showCombo("NONE LEFT!", 600); return; }
+  G.items = r.inv;
+  if (id === "slow"){
+    S.slowNext = true;
+    showCombo("SLOW DIAL ARMED", 800);
+    S.menuMode = "main";
+    persistBoot("battle-item");
+    renderMenu();
+    return;
+  }
+  if (id === "tonic"){
+    S.playerHp = Math.min(CFG.playerMaxHp, S.playerHp + 30);
+    setHpBars();
+    showCombo("+30 HP", 700);
+  } else if (id === "snare"){
+    const chance = Math.min(0.95, captureChance() + 0.35);
+    if (Math.random() < chance){
+      S.captured = true; S.enemyHp = 0; setHpBars();
+      persistBoot("battle-item");
+      resolve(true);
+      return;
+    }
+    showCombo("BROKE FREE!", 700);
+  }
+  enemyAttack("item");
+  if (S.phase !== "menu") return;
+  S.menuMode = "main";
+  persistBoot("battle-item");
+  renderMenu();
+}
+function captureChance(){
+  return S.combo >= CFG.captureThreshold ? 0.8 : 0.25 + S.combo * 0.01;
+}
 function tryCapture(){
+  if (CUR.mode !== "wild"){ showCombo("Can't capture a trainer's Typemon!", 900); return; }
   if (S.enemyHp <= 0){ closeMenu(); return; }
-  const chance = S.combo >= CFG.captureThreshold ? 0.8 : 0.25 + S.combo * 0.01;
-  if (Math.random() < chance){
+  if (Math.random() < captureChance()){
     S.captured = true; S.enemyHp = 0; setHpBars();
     resolve(true);
   } else {
@@ -826,7 +971,17 @@ function startTick(){
     // ONE convergence point: every completion path (hit/miss/stale) lands here.
     // Re-read state AFTER tick — tick() mutates the cursor, so a pre-tick capture
     // would miss a stale-path completion (the late-final-letter stall).
-    if (S.phase === "battle" && session.judge.state.isComplete && !S.sessionDone) nextRound();
+    if (S.phase === "battle" && session.judge.state.isComplete && !S.sessionDone){
+      // FLAWLESS BONUS: an all-perfect word chips the enemy for +2
+      const acc = session.feedback && session.feedback.getAccuracy ? session.feedback.getAccuracy() : 0;
+      if (acc >= 1 && S.enemyHp > 0){
+        S.enemyHp = Math.max(0, S.enemyHp - 2);
+        setHpBars();
+        showCombo("FLAWLESS! +2", 700);
+        if (S.enemyHp <= 0){ resolve(true); return; }
+      }
+      nextRound();
+    }
     updateFeed();
     S.raf = requestAnimationFrame(loop);
   })();
@@ -860,30 +1015,32 @@ const hooks = {
     // judgment counter (pinned bottom)
     const key = evt.judgment === "perfect" ? "Perfect" : evt.judgment === "great" ? "Great" : "Good";
     document.getElementById("c" + key).textContent = 1 + parseInt(document.getElementById("c" + key).textContent, 10);
-    // MOVE DAMAGE: letter_count × type_multiplier × timing_multiplier
-    // (the move being typed IS the attack — more typing, more power, type matchup matters)
+    // MOVE DAMAGE: letters × move-type × timing × effectiveness × STAB
+    // (the move being typed IS the attack — more typing, more power, matchups matter)
     const mv = S.currentMove;
-    const letters = mv ? mv.letters : CFG.damage[evt.judgment] || 5;
-    const typeMult = mv ? (TYPE_MULT[mv.type] || 1) : 1;
-    const timingMult = TIMING_MULT[evt.judgment] || 1;
-    const dmg = Math.max(3, Math.round(letters * typeMult * timingMult));
-    S.enemyHp = Math.max(0, S.enemyHp - dmg);
+    const player = MONSTERS[CUR.playerId], enemy = MONSTERS[CUR.enemyId];
+    const pd = playerDamage(mv, evt.judgment, player ? player.type : "NEUTRAL", enemy ? enemy.type : "NEUTRAL");
+    S.enemyHp = Math.max(0, S.enemyHp - pd.dmg);
     setHpBars();
     // per-type FX at the enemy (move type is the animation key)
     const W = cv.width, H = cv.height;
     spawnTypeFx(mv ? mv.type : "NEUTRAL", W*0.62, H*0.22);
-    if (evt.judgment === "perfect") showCombo((mv ? mv.name : "CRIT") + "! ×" + S.combo, 600);
+    if (pd.eff !== 1) showCombo(effectivenessLabel(pd.eff), 700);
+    else if (evt.judgment === "perfect") showCombo((mv ? mv.name : "CRIT") + "! ×" + S.combo, 600);
     if (S.enemyHp <= 0) resolve(true);
     // completion handled by the tick loop (single convergence point)
   },
   onWrongKey(){                              // dodge — defensive, never punishing
     showCombo("DODGE", 450);
   },
-  onMiss(evt){
-    try { if (session && session.feedback) session.feedback.renderMiss && session.feedback.renderMiss(evt.char, evt.expectedKey); } catch(e){}
+  // NOTE: the framework calls onMiss(char, expectedKey, delta, note) — positional,
+  // not an event object. The old handler read evt.key off a string and the
+  // space soft-fail never fired.
+  onMiss(char, expectedKey){
+    try { if (session && session.feedback) session.feedback.renderMiss && session.feedback.renderMiss(char, expectedKey); } catch(e){}
     if (S.phase !== "battle") return;
-    // C: spaces are soft-fail — suppress HP drain + combo break
-    if (evt && evt.key === " ") return;
+    // spaces are soft-fail — suppress HP drain + combo break
+    if (char === " ") return;
     S.combo = 0; comboEl();
     document.getElementById("cMiss").textContent = 1 + parseInt(document.getElementById("cMiss").textContent, 10);
     enemyAttack("miss");
@@ -963,11 +1120,17 @@ function sizeKeyboardToViewport(){
 }
 setInterval(alignKeyboardToTop, 500);   // self-corrects any drift; survives rebuilds
 function enemyAttack(kind){
-  const dmg = CFG.enemyDamage;
-  S.playerHp = Math.max(0, S.playerHp - dmg);
+  // the enemy picks its next move in rotation and announces it — type-aware,
+  // scaled by its level, with STAB when its move matches its own type
+  const enemy = MONSTERS[CUR.enemyId], player = MONSTERS[CUR.playerId];
+  const mv = enemyMove();
+  const ed = enemyDamage(mv, enemy ? enemy.type : "NEUTRAL", player ? player.type : "NEUTRAL");
+  S.playerHp = Math.max(0, S.playerHp - ed.dmg);
   setHpBars();
   const W = cv.width, H = cv.height;
-  fx.spawn(W*0.62, H*0.16, "ring", -dmg);   // telegraph ring at the ENEMY (attack source), not dots
+  fx.spawn(W*0.62, H*0.16, "ring", -ed.dmg);   // telegraph ring at the ENEMY (attack source), not dots
+  const effNote = ed.eff === 1 ? "" : " — " + effectivenessLabel(ed.eff).toLowerCase();
+  showCombo((enemy ? enemy.name : "ENEMY") + " used " + mv.name + effNote, 900);
   if (S.playerHp <= 0) resolve(false);
 }
 /* Commit the finished battle through the pure domain, then persist.
@@ -979,7 +1142,7 @@ function commitBattle(win){
     good: parseInt(document.getElementById("cGood").textContent, 10) || 0,
     miss: parseInt(document.getElementById("cMiss").textContent, 10) || 0,
   };
-  const captured = win && S.captured;
+  const captured = win && S.captured && CUR.mode === "wild";
   let extra = "";
   if (win && G){
     const idx = G.collection.findIndex(m => m.id === G.activeMonsterId);
@@ -989,7 +1152,33 @@ function commitBattle(win){
       extra = " +" + r.earned + " XP" + (r.leveledUp ? " — LEVEL UP to " + r.owned.level + "!" : "");
     }
     if (captured) G.collection = addCapture(G.collection, MONSTERS[CUR.enemyId]);
-    G.route = commitNodeClear(G.route, CUR.nodeId, CUR.enemyIsBoss);
+    if (CUR.nodeId) G.route = commitNodeClear(G.route, CUR.nodeId, CUR.enemyIsBoss);
+    if (CUR.mode === "trainer"){
+      const npc = NPCS.find(n => n.id === CUR.trainerId);
+      const t = npc && npc.trainer;
+      if (t && CUR.teamIdx + 1 < CUR.team.length){
+        S.trainerNext = true;                    // resolve() offers the trainer's next Typemon
+      } else if (t){
+        // final victory: item rewards, flat bonus XP on the active mon, defeated flag
+        if (t.reward && t.reward.items){
+          for (const id of Object.keys(t.reward.items)) G.items = addItem(G.items, id, t.reward.items[id]);
+        }
+        if (t.reward && t.reward.xpBonus){
+          const bi = G.collection.findIndex(m => m.id === G.activeMonsterId);
+          if (bi >= 0){
+            const o = G.collection[bi];
+            const xp = o.xp + t.reward.xpBonus;
+            const level = levelForXp(xp);
+            const next = G.collection.slice();
+            next[bi] = { ...o, xp, level };
+            G.collection = next;
+            extra += " (+" + t.reward.xpBonus + " bonus XP)";
+          }
+        }
+        G.route = { ...G.route, flags: { ...G.route.flags, [trainerFlag(npc.id)]: true } };
+        if (t.completesGame) G.route = { ...G.route, gameComplete: true };
+      }
+    }
   }
   if (G) persistBoot(win ? (captured ? "resolve-captured" : "resolve-defeated") : "resolve-defeat");
   return { captured, extra };
@@ -1001,15 +1190,36 @@ function resolve(win){
   try { session.judge.detach(); } catch(e){}
   const { captured, extra } = commitBattle(win);
   const enemyName = (MONSTERS[CUR.enemyId] || {}).name || "???";
+  const npc = CUR.mode === "trainer" ? NPCS.find(n => n.id === CUR.trainerId) : null;
   const el = document.getElementById("resolve");
-  document.getElementById("resolveTitle").textContent = win ? (captured ? "CAPTURED!" : "VICTORY!") : "DEFEAT…";
-  document.getElementById("resolveMonster").src = spritePath(CUR.enemySprite);   // repo-relative
-  document.getElementById("resolveSub").innerHTML = win
-    ? (captured
-        ? "You captured " + enemyName + "! Your rhythm tamed the beast." + extra
-        : "You defeated " + enemyName + "!" + extra + " Type faster to capture it next time.")
-    : "The enemy wore you down. Keep the beat — every dodge counts.";
-  document.getElementById("againBtn").textContent = "Return to World";
+  const btn = document.getElementById("againBtn");
+  if (win && npc && S.trainerNext){
+    // mid-series: the trainer sends their next Typemon — Continue keeps the run going
+    const next = CUR.team[CUR.teamIdx + 1];
+    document.getElementById("resolveTitle").textContent = "VICTORY!";
+    document.getElementById("resolveMonster").src = spritePath(MONSTERS[next.monId].wild);
+    document.getElementById("resolveSub").innerHTML = npc.name + " sends out " + MONSTERS[next.monId].name + "!";
+    btn.textContent = "Continue";
+    W.againAction = "trainerNext";
+    S.trainerNext = false;
+  } else if (win && npc){
+    // final trainer win — the victory dialogue plays on return to the world
+    document.getElementById("resolveTitle").textContent = "VICTORY!";
+    document.getElementById("resolveMonster").src = spritePath(CUR.enemySprite);
+    document.getElementById("resolveSub").innerHTML = "You defeated " + npc.name + "!" + extra;
+    btn.textContent = "Continue";
+    W.againAction = "trainerWin";
+  } else {
+    document.getElementById("resolveTitle").textContent = win ? (captured ? "CAPTURED!" : "VICTORY!") : "DEFEAT…";
+    document.getElementById("resolveMonster").src = spritePath(CUR.enemySprite);
+    document.getElementById("resolveSub").innerHTML = win
+      ? (captured
+          ? "You captured " + enemyName + "! Your rhythm tamed the beast." + extra
+          : "You defeated " + enemyName + "!" + extra + " Type faster to capture it next time.")
+      : (npc ? npc.trainer.lose.join(" ") : "The enemy wore you down. Keep the beat — every dodge counts.");
+    btn.textContent = "Return to World";
+    W.againAction = null;
+  }
   el.classList.add("on");
   musicStop();
   console.log("[typemon] resolve: " + document.getElementById("resolveTitle").textContent + " node=" + CUR.nodeId);
@@ -1025,7 +1235,11 @@ function resolve(win){
   }
   // headless loop harness: follow the return path automatically
   if (location.search.includes("autofight") || location.search.includes("autoplay")){
-    setTimeout(() => { if (S.phase === "resolve") returnToWorld(); }, 800);
+    setTimeout(() => {
+      if (S.phase !== "resolve") return;
+      if (W.againAction) document.getElementById("againBtn").click();
+      else returnToWorld();
+    }, 800);
   }
 }
 /* Adapter teardown + return to world. Replaces location.reload(): the session
@@ -1069,10 +1283,20 @@ function spritePath(file){ return RP + "assets/ccbysa/opmons/" + file; }
 
 function bootCheckSave(){
   const routeErrs = assertRoute(MONSTERS, ["background_grass.png", "background_cave.png"]);
-  console.log("[typemon] registry: " + (routeErrs.length ? "FAIL " + routeErrs.join(";") : "route ok, " + Object.keys(MONSTERS).length + " mons"));
+  const dataErrs = routeErrs.concat(
+    assertRidge(MONSTERS, ["background_grass.png", "background_cave.png"]),
+    assertNpcs(MONSTERS, MAPS),
+    assertChart(Object.keys(TYPE_CHART)),
+    assertItems()
+  );
+  console.log("[typemon] registry: " + (dataErrs.length ? "FAIL " + dataErrs.join(";") : "data ok, " + Object.keys(MONSTERS).length + " mons"));
   const r = loadSave(store);
   if (r.state){
-    G = { activeMonsterId: r.state.activeMonsterId, collection: r.state.collection, route: normalizeRoute(r.state.route) };
+    G = {
+      activeMonsterId: r.state.activeMonsterId, collection: r.state.collection,
+      route: normalizeRoute(r.state.route),
+      items: r.state.items ? normalizeItems(r.state.items) : { ...STARTER_ITEMS },
+    };
     CUR.playerId = G.activeMonsterId;
     document.getElementById("continueBtn").style.display = "inline-block";
     console.log("[typemon] boot: save found, active=" + G.activeMonsterId + " at " + G.route.mapId + " R" + G.route.row + "C" + G.route.col);
@@ -1107,7 +1331,7 @@ function renderStarter(){
 }
 function pickStarter(id){
   if (W.phase !== "starter" || !MONSTERS[id]) return;
-  G = { activeMonsterId: id, collection: [makeOwned(MONSTERS[id], 0)], route: newRouteState() };
+  G = { activeMonsterId: id, collection: [makeOwned(MONSTERS[id], 0)], route: newRouteState(), items: { ...STARTER_ITEMS } };
   CUR.playerId = id;
   persistBoot("boot-new-game");
   document.getElementById("starterRoot").classList.remove("on");
@@ -1133,7 +1357,7 @@ function showWorld(){
 }
 function renderWorld(){
   if (!G) return;
-  worldView.render(G.route);                      // canvas map + avatar (view owns pixels)
+  worldView.render(G.route, G.route.flags);       // canvas map + avatar + NPCs (view owns pixels)
   document.getElementById("worldPrompt").textContent = worldPromptFor();
   const mapName = MAPS[G.route.mapId] ? MAPS[G.route.mapId].name : G.route.mapId;
   document.getElementById("worldCoords").textContent =
@@ -1144,11 +1368,12 @@ function renderWorld(){
     : "Tall grass \u2014 clear";
   const a = activeOwned();
   document.getElementById("worldParty").innerHTML = a
-    ? ("Active: <b>" + a.name + " Lv" + a.level + "</b> · Collection: <b>" + G.collection.length + "</b>")
+    ? ("Active: <b>" + a.name + " Lv" + a.level + "</b> · Collection: <b>" + G.collection.length + "</b> · Bag: <b>" + bagSummary() + "</b>")
     : "";
 }
 function worldPromptFor(){
-  if (G.route.done) return "ROUTE COMPLETE! The cave boss is beaten. Press C to view your collection.";
+  if (G.route.gameComplete) return "TYPEMON MASTER! The ridge is yours. Press C to view your collection.";
+  if (G.route.done) return "The cave boss is beaten! A crystal tunnel glimmers in the cave's east wall\u2026";
   const here = G.route;
   const z = encounterZoneAt(here.mapId, here.row, here.col);
   if (z){
@@ -1156,15 +1381,28 @@ function worldPromptFor(){
     const cl = isNodeCleared(G.route, node) ? " (cleared \u2014 wilds still rustle here)" : "";
     return "Tall grass" + cl + "! Keep walking to stir up a wild Typemon (" + here.grassSteps + "/" + GRASS_THRESHOLD + ").";
   }
-  if (here.mapId !== "route_a") return "Stone Cave. Walk to the glowing rune at the far side to challenge the boss.";
+  if (here.mapId === "hut_a") return "Ember Rest. Gramps has wisdom \u2014 and TONICs, if you're running low.";
+  if (here.mapId === "ridge_a") return "Ember Ridge. Strong wilds \u2014 Keeper Maro waits at the far east.";
+  if (here.mapId === "cave_a") return "Stone Cave. Walk to the glowing rune at the far side to challenge the boss.";
   const f = facingTile(here);
   if (f.transition && f.transition.kind === "enter_cave") return "A dark cave mouth. Press Enter or Space to enter the Stone Cave.";
-  if (f.interact === "home") return "Your home clearing. The door is locked \u2014 head out into the world!";
+  if (f.transition && f.transition.kind === "enter_hut") return "Ember Rest, your home. Press Enter or Space to step inside.";
+  if (f.interact === "enter_ridge") return "A crystal tunnel, sealed by a sleeping boss's aura. Beat the cave boss first.";
+  if (f.interact === "sign") return "A signpost. Press Enter or Space to read it.";
+  const npc = npcAt(here.mapId, f.row, f.col);
+  if (npc) return npc.name + (isTrainer(npc) && !isTrainerDefeated(here.flags, npc.id) ? " wants to battle! Press Enter or Space." : " \u2014 press Enter or Space to talk.");
   return "Home clearing. Walk right (\u2192) along the path to the tall grass.";
 }
 // One grid step per accepted key action. Blocked moves still turn the avatar.
 function worldStep(dir){
   if (W.phase !== "world" || !G) return;
+  // NPCs are solid — walk around them (or talk to them)
+  const dd = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] }[dir];
+  if (dd && npcAt(G.route.mapId, G.route.row + dd[0], G.route.col + dd[1])){
+    G.route = { ...G.route, face: dir };
+    renderWorld();
+    return;
+  }
   const res = moveState(G.route, dir);
   if (!res.moved){ G.route = res.state; renderWorld(); return; }
   G.route = res.state;
@@ -1179,9 +1417,79 @@ function worldStep(dir){
   renderWorld();
 }
 // Enter / Space: act on the tile the avatar faces (cave transitions, home door).
+/* ===================== DIALOG (NPCs + signs) =====================
+   W.phase = "dialog" while the overlay is up; world keys are dead. */
+const DLG = { lines: [], idx: 0, onDone: null };
+function openDialog(name, lines, onDone){
+  DLG.lines = lines.slice(); DLG.idx = 0; DLG.onDone = onDone || null;
+  document.getElementById("dialogName").textContent = name;
+  document.getElementById("dialogText").textContent = DLG.lines[0] || "";
+  document.getElementById("dialog").classList.add("on");
+  W.phase = "dialog";
+}
+function advanceDialog(){
+  DLG.idx++;
+  if (DLG.idx >= DLG.lines.length){ finishDialog(); return; }
+  document.getElementById("dialogText").textContent = DLG.lines[DLG.idx];
+}
+function finishDialog(){
+  document.getElementById("dialog").classList.remove("on");
+  W.phase = "world";
+  const cb = DLG.onDone; DLG.onDone = null;
+  renderWorld();
+  if (cb) cb();
+}
+// Talk to an NPC: undefeated trainers issue their challenge; Gramps hands out
+// his gift once (then a top-up when the satchel runs low); everyone else chats.
+function talkTo(npc){
+  const flags = G.route.flags || {};
+  if (isTrainer(npc) && !isTrainerDefeated(flags, npc.id)){
+    openDialog(npc.name, npc.trainer.intro, () => startTrainerBattle(npc));
+    return;
+  }
+  if (isTrainer(npc)){
+    openDialog(npc.name, [npc.trainer.win[0]], null);
+    return;
+  }
+  let lines = npc.lines.slice();
+  let after = null;
+  if (npc.gift && !flags[npc.gift.flag]){
+    for (const id of Object.keys(npc.gift.items)) G.items = addItem(G.items, id, npc.gift.items[id]);
+    G.route = { ...G.route, flags: { ...flags, [npc.gift.flag]: true } };
+    lines = lines.concat([npc.gift.giftLine]);
+    after = () => persistBoot("gift");
+  } else if (npc.giftRepeat){
+    const low = Object.keys(npc.giftRepeat.items).every(id => countItem(G.items, id) <= npc.giftRepeat.maxHave);
+    if (low){
+      for (const id of Object.keys(npc.giftRepeat.items)) G.items = addItem(G.items, id, npc.giftRepeat.items[id]);
+      lines = lines.concat([npc.giftRepeat.repeatLine]);
+      after = () => persistBoot("gift");
+    }
+  }
+  openDialog(npc.name, lines, after);
+}
 function worldInteract(){
   if (W.phase !== "world" || !G) return;
   const f = facingTile(G.route);
+  // an NPC face-to-face takes priority over the tile behind them
+  const npc = npcAt(G.route.mapId, f.row, f.col);
+  if (npc){ talkTo(npc); return; }
+  if (f.interact === "sign"){
+    const s = signAt(G.route.mapId, f.row, f.col);
+    if (s){ openDialog("SIGN", [s.text], null); return; }
+  }
+  if (f.interact === "enter_ridge"){
+    if (!isNodeCleared(G.route, "cave")){
+      document.getElementById("worldPrompt").textContent =
+        "The crystal tunnel is sealed by a sleeping boss's aura. Beat the cave boss first.";
+      return;
+    }
+    G.route = { ...G.route, mapId: "ridge_a", row: 8, col: 1, face: "right", grassSteps: 0 };
+    persistBoot("enter-ridge");
+    console.log("[typemon] world: tunnel -> ridge_a");
+    renderWorld();
+    return;
+  }
   if (f.transition){
     G.route = { ...G.route, ...applyTransition(G.route, f.transition), grassSteps: 0 };
     persistBoot("transition");
@@ -1189,7 +1497,6 @@ function worldInteract(){
     renderWorld();
     return;
   }
-  if (f.interact === "home"){ renderWorld(); return; }
   const p = document.getElementById("worldPrompt");
   if (p) p.textContent = "Nothing to interact with here. Walk into the tall grass to find Typemon.";
 }
@@ -1197,24 +1504,54 @@ function worldInteract(){
 // (cycles the node's encounter list by encIndex) so the first test is reliable.
 function startEncounter(nodeId){
   if (W.phase !== "world" || !G) return;
-  const node = ROUTE_A.nodes.find(n => n.id === nodeId);
-  if (!node) return;
-  let enc;
-  if (node.boss){
-    enc = { ...node.boss, mode: "boss" };
+  let table, isBoss;
+  if (nodeId === "cave"){
+    const node = ROUTE_A.nodes.find(n => n.id === "cave");
+    table = { encounters: [node.boss], bg: node.bg, label: node.label, nodeId: node.id };
+    isBoss = true;
   } else {
-    enc = pickEncounterIndexed(node.encounters, G.route.encIndex);
-    if (!enc) return;
-    enc.mode = "wild";
+    table = zoneTable(nodeId);          // Route A zones AND Ember Ridge zones
+    isBoss = false;
   }
+  if (!table) return;
+  const enc = pickEncounterIndexed(table.encounters, G.route.encIndex);
+  if (!enc) return;
   if (!MONSTERS[enc.monId]) return;
   G.route = { ...G.route, encIndex: G.route.encIndex + 1, grassSteps: 0 };
-  CUR.enemyId = enc.monId; CUR.enemyLevel = enc.level; CUR.enemyIsBoss = enc.mode === "boss";
-  CUR.enemySprite = CUR.enemyIsBoss ? MONSTERS[enc.monId].evolved : MONSTERS[enc.monId].wild;
-  CUR.nodeId = node.id;
-  CUR.bg = "battle_bkg/" + node.bg;
+  CUR.enemyId = enc.monId; CUR.enemyLevel = enc.level; CUR.enemyIsBoss = isBoss;
+  CUR.enemySprite = isBoss ? MONSTERS[enc.monId].evolved : MONSTERS[enc.monId].wild;
+  CUR.nodeId = table.nodeId;
+  CUR.bg = "battle_bkg/" + table.bg;
   CUR.playerId = G.activeMonsterId;
+  CUR.mode = isBoss ? "boss" : "wild";
+  CUR.trainerId = null; CUR.team = null; CUR.teamIdx = 0;
   persistBoot("encounter");                        // save the world position before the modal battle
+  beginBattle();
+}
+// Trainer battle: a fixed team, fought one Typemon at a time. No capture.
+function startTrainerBattle(npc){
+  const t = npc.trainer;
+  CUR.mode = "trainer";
+  CUR.trainerId = npc.id;
+  CUR.team = t.team;
+  CUR.teamIdx = 0;
+  setupTrainerMon(0);
+  persistBoot("trainer");
+  beginBattle();
+}
+function setupTrainerMon(i){
+  const m = CUR.team[i];
+  CUR.enemyId = m.monId;
+  CUR.enemyLevel = m.level;
+  CUR.enemyIsBoss = false;
+  CUR.enemySprite = MONSTERS[m.monId].wild;
+  CUR.nodeId = null;                               // trainers clear no map node
+  CUR.bg = "battle_bkg/background_grass.png";
+  CUR.playerId = G.activeMonsterId;
+}
+function continueTrainerSeries(){
+  CUR.teamIdx++;
+  setupTrainerMon(CUR.teamIdx);
   beginBattle();
 }
 // Harness helper: place the avatar on a known tile (used by the boot/harness
@@ -1289,6 +1626,7 @@ async function beginBattle(){
   // full-HP start every battle (Decision 4); reset all per-battle state
   S.combo = 0; S.playerHp = CFG.playerMaxHp; S.enemyHp = CFG.enemyMaxHp;
   S.captured = false; S.roundIndex = 0; S.sessionDone = false; S.currentMove = null; S.pendingText = "";
+  S.menuMode = "main"; S.enemyMoveIdx = 0; S.slowNext = false; S.trainerNext = false;
 
   // load sprites (fast, no audio dependency)
   monsterImgs[CUR.playerId] = await loadImg("assets/ccbysa/opmons/" + MONSTERS[CUR.playerId].wild);
@@ -1300,12 +1638,14 @@ async function beginBattle(){
   document.getElementById("playerFace").src = spritePath(MONSTERS[CUR.playerId].wild);   // repo-relative
   document.getElementById("enemyFace").src  = spritePath(CUR.enemySprite);
   document.getElementById("playerName").textContent = p.name + " Lv" + p.level;
-  document.getElementById("enemyName").textContent = MONSTERS[CUR.enemyId].name + " Lv" + CUR.enemyLevel + (CUR.enemyIsBoss ? " BOSS" : "");
+  const tName = CUR.mode === "trainer" ? (NPCS.find(n => n.id === CUR.trainerId) || {}).name : "";
+  document.getElementById("enemyName").textContent =
+    MONSTERS[CUR.enemyId].name + " Lv" + CUR.enemyLevel + (CUR.enemyIsBoss ? " BOSS" : "") + (tName ? " · " + tName : "");
 
   // typing content: real words, shuffled per battle — one word per round (D)
   // words.json sits NEXT TO index.html — relative fetch works at server root
   // AND under GH Pages subpath (demo/), unlike an absolute /demo/ path.
-  const wordPool = await (await fetch("demo/words.json")).json();
+  const wordPool = await (await fetch("words.json")).json();
   S.roundWords = [];
   for (let i=0;i<ROUND_BUDGET;i++) S.roundWords.push(wordPool.words[Math.floor(Math.random()*wordPool.words.length)]);
   S.roundIndex = 0;
@@ -1368,10 +1708,33 @@ function musicStop(){ try { musicSrc && musicSrc.stop(); } catch(e){} }
    starter/world/party keys only in their shell phases. */
 document.addEventListener("keydown", (e) => {
   if (S.phase === "menu" && document.getElementById("battleRoot").classList.contains("on")){
-    if (e.key === "1") menuChoice("m0");
-    else if (e.key === "2") menuChoice("m1");
-    else if (e.key === "3") menuChoice("m2");
-    else if (e.key === "4") menuChoice("capture");
+    const k = e.key;
+    if (k === "Escape"){
+      if (S.menuMode !== "main"){ S.menuMode = "main"; renderMenu(); }
+      return;
+    }
+    if (S.menuMode === "main"){
+      if (k === "1") menuChoice("m0");
+      else if (k === "2") menuChoice("m1");
+      else if (k === "3") menuChoice("m2");
+      else if (k === "4") menuChoice("capture");
+      else if (k === "5") menuChoice("switch");
+      else if (k === "6") menuChoice("bag");
+    } else if (S.menuMode === "switch"){
+      const n = parseInt(k, 10);
+      if (k === "0") menuChoice("back");
+      else if (G && n >= 1 && n <= G.collection.length) menuChoice("s" + (n - 1));
+    } else if (S.menuMode === "bag"){
+      const ids = Object.keys(ITEM_DEFS).filter(id => countItem(G.items, id) > 0);
+      const n = parseInt(k, 10);
+      if (k === "0" || ids.length === 0) menuChoice("back");
+      else if (n >= 1 && n <= ids.length) menuChoice("b:" + ids[n - 1]);
+    }
+    return;
+  }
+  if (W.phase === "dialog"){
+    if (e.key === "Enter" || e.key === " "){ advanceDialog(); e.preventDefault(); }
+    else if (e.key === "Escape"){ finishDialog(); e.preventDefault(); }
     return;
   }
   if (W.phase === "starter"){
@@ -1411,10 +1774,6 @@ window.__world = {
   place: (mapId, row, col, face) => placeWorld(mapId, row, col, face),
   maps: () => Object.keys(MAPS),
 };
-document.querySelectorAll(".menuKey").forEach(el => {
-  el.addEventListener("click", () => menuChoice(el.dataset.menu));
-});
-
 /* ===================== MAIN LOOP ===================== */
 let last = performance.now();
 function main(now){
@@ -1428,7 +1787,17 @@ requestAnimationFrame(main);
 
 document.getElementById("startBtn").addEventListener("click", newGame);
 document.getElementById("continueBtn").addEventListener("click", continueGame);
-document.getElementById("againBtn").addEventListener("click", returnToWorld);
+// the resolve button's job depends on how the battle ended (see resolve())
+document.getElementById("againBtn").addEventListener("click", () => {
+  const act = W.againAction; W.againAction = null;
+  if (act === "trainerNext"){ continueTrainerSeries(); return; }
+  returnToWorld();
+  if (act === "trainerWin"){
+    const npc = NPCS.find(n => n.id === CUR.trainerId);
+    if (npc) openDialog(npc.name, npc.trainer.win, null);
+  }
+});
+document.getElementById("dialogBox").addEventListener("click", () => { if (W.phase === "dialog") advanceDialog(); });
 // AT8 harness: seed a corrupt save BEFORE boot reads it (?corruptsave=1).
 if (location.search.includes("corruptsave")){ try { localStorage.setItem("typemon.save.v1", "{garbage"); } catch(e){} }
 bootCheckSave();
@@ -1519,8 +1888,12 @@ function stSummary(){
 if (AUTOPLAY){
   document.getElementById("selftest").classList.add("on");
   setTimeout(() => {
-    stLine(Object.keys(MONSTERS).length === 8, "AT0 registry holds 8 mons");
+    stLine(Object.keys(MONSTERS).length === 28, "AT0 registry holds 28 mons");
     stLine(assertRoute(MONSTERS, ["background_grass.png", "background_cave.png"]).length === 0, "AT0 route_a valid");
+    stLine(assertRidge(MONSTERS, ["background_grass.png", "background_cave.png"]).length === 0, "AT0 ridge valid");
+    stLine(assertNpcs(MONSTERS, MAPS).length === 0, "AT0 npcs valid");
+    stLine(assertChart(Object.keys(TYPE_CHART)).length === 0, "AT0 type chart valid");
+    stLine(assertItems().length === 0, "AT0 items valid");
     const parity = ["EMBER", "TACKLE", "GUST"].every((n, i) => MOVE_DB["1"][i].name === n)
       && ["STONE", "SHIELD", "QUAKE"].every((n, i) => MOVE_DB["53"][i].name === n);
     stLine(parity, "RG0 move parity vs demo literal (1/53)");

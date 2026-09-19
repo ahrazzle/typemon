@@ -32,7 +32,7 @@ Open `demo/index.html` through that server, click **START**, and play.
 | Input | Action |
 |---|---|
 | Arrow keys / `W` `A` `S` `D` | Walk |
-| `Enter` or `Space` | Interact with the tile you are facing (doors, cave mouths) |
+| `Enter` or `Space` | Interact with the tile you are facing (doors, cave mouths, signs, tunnels, NPCs) |
 | `C` | Open the collection |
 
 **Battle**
@@ -47,6 +47,22 @@ Timing grades the hit: **Perfect** is a critical, then **Great**, then **Good**.
 Miss the beat and the enemy strikes. Hit streaks charge the ultimate and the
 capture throw.
 
+**Battle menus** (press the number, or click)
+
+| Input | Action |
+|---|---|
+| `1` `2` `3` | Pick an attack move |
+| `4` | Throw a SNARE — attempt capture (wild battles only) |
+| `5` | Switch active monster mid-battle (costs a turn) |
+| `6` | Open the bag |
+| `Esc` | Back out of a submenu |
+
+**Bag items** — TONIC restores 30 HP, SNARE captures at +35% odds, SLOW DIAL
+slows the next typing word without costing a turn. Items are spent from the
+bag and persist in the save.
+
+**Dialogue** — `Enter`/`Space` advances, `Esc` closes.
+
 **Menus**
 
 | Input | Action |
@@ -58,16 +74,20 @@ capture throw.
 ## Gameplay loop
 
 1. **Pick a starter** — one of three original monsters.
-2. **Walk Route A** — `START -> GRASS A -> GRASS B -> CAVE BOSS -> END`.
-   Walking in grass triggers wild encounters.
-3. **Battle** — type each attack word in rhythm; the enemy attacks back only on
-   your misses, never on a hidden timer.
-4. **Catch** — weaken a wild monster, then throw on a `good`/`great`/`perfect`
-   hit.
-5. **Train and evolve** — accumulated XP levels a monster up; evolution is
-   derived from XP, not a separate minigame.
-6. **Reach the cave boss** and clear the route. Progress (collection, XP, route
-   clears) is saved to `localStorage`, so a refreshed tab resumes.
+2. **Explore the island** — Ember Rest (your hut, Gramps, signs), Route A,
+   Stone Cave, and Ember Ridge. Walking in tall grass triggers wild
+   encounters from the zone's own table.
+3. **Battle** — type each attack word in rhythm; the enemy attacks back only
+   on your misses, never on a hidden timer. Damage folds in move power,
+   timing grade, an original 18-type effectiveness chart, and STAB. Flawless
+   words hit harder.
+4. **Catch** — weaken a wild monster, then throw a SNARE on a
+   `good`/`great`/`perfect` hit.
+5. **Challenge trainers** — Pip, Sage, and Ridge Keeper Maro fight fixed
+   multi-monster teams in sequence; beating Maro completes the game.
+6. **Beat the cave boss** to unseal the crystal tunnel to Ember Ridge.
+   Progress (collection, XP, items, trainer flags, route clears) is saved to
+   `localStorage`, so a refreshed tab resumes.
 
 ## Tests
 
@@ -77,9 +97,10 @@ The domain layer is pure and dependency-free:
 node tests/run.mjs        # exits non-zero on failure
 ```
 
-Verified state: **89 passed, 0 failed** (exit 0). The suite covers the monster
-registry, the route/encounter tables, capture odds, XP/levels, the overworld
-tile logic, and the save-file schema.
+Verified state: **140 passed, 0 failed** (exit 0). The suite covers the monster
+registry, the type chart, items, NPCs/trainers, the ridge encounter tables,
+the route/encounter tables, capture odds, XP/levels, the overworld tile logic,
+and the save-file schema.
 
 There is also a scripted in-browser smoke run that drives the whole arc:
 
@@ -149,7 +170,10 @@ inside `demo/index.html` are relative (`./vendor/typejoy.js`,
 `../assets/ccbysa/...`); there are no absolute `/...` paths and no `file://`
 URLs, so the pages resolve correctly under a subpath.
 
-- Publish from the repository root and open `<site>/demo/` to play.
+- Publish from the repository root and open `<site>/demo/` (or `<site>/`)
+  to play. The root `index.html` is **generated** from `demo/index.html` —
+  never edit it by hand; regenerate with `node scripts/sync-root-index.mjs`
+  after changing the demo.
 - Keep `demo/index.html` and `demo/vendor/` together: the vendor import is
   relative to the page.
 - Asset paths are prefixed `../` relative to the page, so moving

@@ -18,6 +18,8 @@
 //   C  cave entrance (blocked, interact -> cave_a)
 //   X  cave mouth (blocked, interact -> route_a)
 //   B  cave boss tile (walkable; stepping on it starts the boss battle)
+//   S  signpost (blocked, interact -> sign text)
+//   T  ridge tunnel (blocked, interact -> ridge_a; gated on the cave boss)
 
 export const GRASS_THRESHOLD = 3;   // deterministic: every 3rd tall-grass step -> encounter
 export const TILE_SIZE = 48;        // world tile edge in CSS px (renderer + camera)
@@ -35,6 +37,8 @@ export const TILES = {
   "C": { kind: "cave", walkable: false, interact: "enter_cave" },
   "X": { kind: "cavemouth", walkable: false, interact: "exit_cave" },
   "B": { kind: "bosstile", walkable: true, boss: true },
+  "S": { kind: "sign", walkable: false, interact: "sign" },
+  "T": { kind: "tunnel", walkable: false, interact: "enter_ridge" },
 };
 
 // ---- authored maps -------------------------------------------------------
@@ -44,7 +48,7 @@ const OUTDOOR_ROWS = [
   "#..HH......,,,,,.......#",
   "#..HH......,,,,,.......#",
   "#..D........-.......o..#",
-  "#..----------..........#",
+  "#.S----------..........#",
   "###-................o..#",
   "###-............~~~~...#",
   "#..-............~~~~...#",
@@ -55,14 +59,14 @@ const OUTDOOR_ROWS = [
   "#...;;;;;...........-..#",
   "#...;;;;;...........-..#",
   "#................o..-###",
-  "#...................C###",
+  "#................S..C###",
   "########################",
 ];
 
 const CAVE_ROWS = [
   "################",
   "#--------------#",
-  "#---o-------B--#",
+  "#---o-------B-T#",
   "#-----------o--#",
   "#------~~~~----#",
   "#------~~~~----#",
@@ -71,6 +75,32 @@ const CAVE_ROWS = [
   "#-X---o--------#",
   "#--------------#",
   "################",
+];
+
+const HUT_ROWS = [
+  "#########",
+  "#.......#",
+  "#.......#",
+  "#.......#",
+  "#...D...#",
+  "#########",
+];
+
+const RIDGE_ROWS = [
+  "######################",
+  "#,,,,,------;;;;;;;;;#",
+  "#,,,,,------;;;;;;;;;#",
+  "#,,,,,------;;;;;;;;;#",
+  "#,,,,,,-----;;;;;;;;;#",
+  "#,,,,,,-----;;;;;;;;##",
+  "##,,,,,-----;;;;;;;###",
+  "##,,,,------;;;#######",
+  "#.,,,--------#########",
+  "#.,,---------.########",
+  "#.,----------..#######",
+  "#..----------..S..####",
+  "#..----------....#####",
+  "######################",
 ];
 
 export const MAPS = {
@@ -82,6 +112,7 @@ export const MAPS = {
     spawn: { mapId: "route_a", row: 5, col: 3, face: "right" },
     transitions: {
       "16,20": { kind: "enter_cave", to: "cave_a", spawn: { mapId: "cave_a", row: 9, col: 2, face: "up" } },
+      "4,3": { kind: "enter_hut", to: "hut_a", spawn: { mapId: "hut_a", row: 3, col: 4, face: "down" } },
     },
   },
   cave_a: {
@@ -93,6 +124,24 @@ export const MAPS = {
     transitions: {
       "8,2": { kind: "exit_cave", to: "route_a", spawn: { mapId: "route_a", row: 15, col: 20, face: "down" } },
     },
+  },
+  hut_a: {
+    id: "hut_a",
+    name: "EMBER REST",
+    kind: "indoor",
+    rows: HUT_ROWS,
+    spawn: { mapId: "hut_a", row: 3, col: 4, face: "down" },
+    transitions: {
+      "4,4": { kind: "exit_hut", to: "route_a", spawn: { mapId: "route_a", row: 5, col: 3, face: "up" } },
+    },
+  },
+  ridge_a: {
+    id: "ridge_a",
+    name: "EMBER RIDGE",
+    kind: "outdoor",
+    rows: RIDGE_ROWS,
+    spawn: { mapId: "ridge_a", row: 8, col: 1, face: "right" },
+    transitions: {},
   },
 };
 
@@ -155,9 +204,13 @@ export function spawnFor(mapId) {
   return map ? { ...map.spawn } : null;
 }
 
-// Zone -> route node id (the encounter table lives in src/data/route_a.js).
+// Zone -> route node id (the encounter tables live in src/data/route_a.js and
+// src/data/ridge.js; looked up via zoneTable() in ridge.js).
 export function zoneToNode(zone) {
-  return zone === "grass_a" || zone === "grass_b" ? zone : null;
+  if (zone === "grass_a" || zone === "grass_b") return zone;
+  if (zone === "grass_c") return "ridge_c";
+  if (zone === "grass_d") return "ridge_d";
+  return null;
 }
 
 // Deterministic encounter selection: cycle the node's candidate list by index.
