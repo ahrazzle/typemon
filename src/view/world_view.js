@@ -11,6 +11,7 @@
 // every animation; the map void is designed NIGHT ink, never black.
 
 import { MAPS, TILES, TILE_SIZE } from "../domain/overworld.js";
+import { NPCS, isTrainer, trainerFlag } from "../data/npcs.js";
 
 /* ===================== PALETTE (DUSKPAPER) =====================
    Bind to the battle tokens so overworld + battle are one world's day-part. */
@@ -92,6 +93,7 @@ export function createWorldView(canvas) {
 
   // ---- view state (persists across frames for the ambient loop) ----
   let lastState = null;
+  let lastFlags = {};
   let base = null, bctx = null;       // cached static layer (grounds + solids)
   let camX = 0, camY = 0;
   let worldW = 0, worldH = 0, nCols = 0, nRows = 0, ts = TILE_SIZE;
@@ -176,7 +178,7 @@ export function createWorldView(canvas) {
   function inb(r, c) { return r >= 0 && c >= 0 && r < nRows && c < nCols; }
   function chAt(r, c) { return inb(r, c) ? map.rows[r][c] : null; }
   function kindAt(r, c) { const ch = chAt(r, c); return ch == null ? null : ((TILES[ch] || {}).kind || null); }
-  function isIndoor() { return map && map.kind === "cave"; }
+  function isIndoor() { return map && map.kind !== "outdoor"; }
 
   /* ---------------- per-tile STATIC parts (cached layer) ---------------- */
 
@@ -439,6 +441,45 @@ export function createWorldView(canvas) {
     ctx.globalAlpha = 1;
   }
 
+  function drawSign(sx, sy, row, col) {
+    // wooden signpost with a plank — paper-cut, INK keyline + gold nail dots
+    drawOutdoorGround(sx, sy, row, col);
+    const cx = sx + ts / 2;
+    ctx.fillStyle = "#3a2c1c";
+    ctx.fillRect(cx - ts * 0.05, sy + ts * 0.3, ts * 0.1, ts * 0.7);
+    ctx.strokeStyle = P.INK; ctx.lineWidth = 2;
+    ctx.strokeRect(cx - ts * 0.05, sy + ts * 0.3, ts * 0.1, ts * 0.7);
+    const pw = ts * 0.72, ph = ts * 0.3, px = cx - pw / 2, py = sy + ts * 0.22;
+    ctx.fillStyle = "#6b4f2e";
+    rrect(ctx, px, py, pw, ph, 3); ctx.fill();
+    ctx.strokeStyle = P.INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = P.RIM; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(px + 2, py + 2); ctx.lineTo(px + pw - 2, py + 2); ctx.stroke();
+    // carved "!" — readable at a glance
+    ctx.fillStyle = P.GOLD;
+    ctx.fillRect(cx - 1.5, py + ph * 0.18, 3, ph * 0.42);
+    ctx.beginPath(); ctx.arc(cx, py + ph * 0.74, 2, 0, TAU); ctx.fill();
+  }
+
+  function drawTunnel(sx, sy, row, col) {
+    // ridge tunnel: dark arch cut into the cave wall, crystal seam glints
+    drawCaveWall(sx, sy, row, col);
+    const cx = sx + ts / 2;
+    const aw = ts * 0.6, at = sy + ts * 0.28, ab = sy + ts * 0.95;
+    ctx.fillStyle = "#05070c";
+    ctx.beginPath();
+    ctx.moveTo(cx - aw / 2, ab);
+    ctx.lineTo(cx - aw / 2, at + aw / 2);
+    ctx.arc(cx, at + aw / 2, aw / 2, Math.PI, 0);
+    ctx.lineTo(cx + aw / 2, ab);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = P.crystal; ctx.lineWidth = 2; ctx.stroke();
+    // two glints on the arch
+    ctx.fillStyle = P.crystalHi;
+    ctx.beginPath(); ctx.arc(cx - aw * 0.22, at + aw * 0.32, 1.8, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + aw * 0.18, at + aw * 0.55, 1.4, 0, TAU); ctx.fill();
+  }
+
   function drawCaveEntrance(sx, sy, row, col) {
     // rock face with a keyhole arch cut (pitch), teal crystal veins
     ctx.fillStyle = P.cface; ctx.fillRect(sx, sy, ts, ts);
@@ -568,6 +609,8 @@ export function createWorldView(canvas) {
         case "rock": return drawCaveRock(sx, sy, row, col);
         case "cavemouth": return drawCaveMouthX(sx, sy, row, col);
         case "bosstile": return drawBossBase(sx, sy, row, col);
+        case "tunnel": return drawTunnel(sx, sy, row, col);
+        case "door": return drawDoor(sx, sy, row, col);   // hut exit — must stay visible indoors
         case "grass": return drawCaveFloor(sx, sy, row, col);
         default: return drawCaveFloor(sx, sy, row, col);
       }
@@ -587,6 +630,7 @@ export function createWorldView(canvas) {
       case "cave": return drawCaveEntrance(sx, sy, row, col);
       case "cavemouth": return drawCaveMouthX(sx, sy, row, col);
       case "bosstile": return drawBossBase(sx, sy, row, col);
+      case "sign": return drawSign(sx, sy, row, col);
       default: return drawOutdoorGround(sx, sy, row, col);
     }
   }
@@ -1002,6 +1046,50 @@ export function createWorldView(canvas) {
     ctx.strokeStyle = P.INK; ctx.lineWidth = 1.5; poly(ctx, pts); ctx.stroke();
   }
 
+  /* ---------------- NPC figures ---------------- */
+
+  function drawNpc(cx, cy, npc, alert, t) {
+    const s = ts;
+    const bob = reduced ? 0 : Math.sin(TAU * t / PULSE_MS + 1.3) * 1.5;
+    const feetY = cy + s * 0.38;
+    const y = feetY - s * 0.9 + bob;
+    groundShadow(cx, feetY + 2, s, 0.3);
+    // cloak (their color accent)
+    const bodyTop = y + s * 0.42, bodyH = s * 0.34, bodyW = s * 0.34;
+    ctx.fillStyle = npc.color || "#8a93a6";
+    rrect(ctx, cx - bodyW / 2, bodyTop, bodyW, bodyH, 4); ctx.fill();
+    ctx.strokeStyle = P.INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = P.RIM; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - bodyW / 2 + 1, bodyTop + 1); ctx.lineTo(cx + bodyW / 2 - 1, bodyTop + 1); ctx.stroke();
+    // gold belt
+    ctx.strokeStyle = P.GOLD; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - bodyW / 2 + 2, bodyTop + bodyH * 0.62); ctx.lineTo(cx + bodyW / 2 - 2, bodyTop + bodyH * 0.62); ctx.stroke();
+    // head
+    const headR = s * 0.13, headY = y + s * 0.3;
+    ctx.fillStyle = P.skin;
+    ctx.beginPath(); ctx.arc(cx, headY, headR, 0, TAU); ctx.fill();
+    ctx.strokeStyle = P.INK; ctx.lineWidth = 2; ctx.stroke();
+    // hood (cloak color, coral never used here)
+    ctx.fillStyle = npc.color || "#8a93a6";
+    ctx.beginPath(); ctx.arc(cx, headY - s * 0.02, headR + s * 0.02, Math.PI * 0.95, Math.PI * 2.05); ctx.fill();
+    ctx.strokeStyle = P.INK; ctx.lineWidth = 2; ctx.stroke();
+    // two dot eyes, facing the viewer
+    ctx.fillStyle = "#20242e";
+    ctx.beginPath(); ctx.arc(cx - s * 0.05, headY + s * 0.01, s * 0.022, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + s * 0.05, headY + s * 0.01, s * 0.022, 0, TAU); ctx.fill();
+    if (alert) {
+      // "!" bubble over undefeated trainers
+      const by = headY - headR - s * 0.34 + (reduced ? 0 : Math.sin(TAU * t / PULSE_MS) * 2);
+      ctx.fillStyle = P.GOLD;
+      ctx.beginPath(); ctx.arc(cx, by, s * 0.13, 0, TAU); ctx.fill();
+      ctx.strokeStyle = P.INK; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = P.INK;
+      ctx.font = "700 " + Math.round(s * 0.18) + "px Inter, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("!", cx, by + 1);
+    }
+  }
+
   // Renderer-side walk hop: detect a tile change between renders and animate a
   // short crisp hop so RIFF literally walks on his own rhythm. No domain changes.
   let prevPos = null, moveStart = 0;
@@ -1040,8 +1128,8 @@ export function createWorldView(canvas) {
 
   function drawZonePlate() {
     if (cssW < 900) return;   // keep clear of controls on narrow windows
-    const name = isIndoor() ? "GLINTFALL HOLLOW" : "EMBER MEADOW";
-    const w = 168, h = 26, x = 14, y = 14;
+    const name = (map && map.name ? map.name : "EMBER MEADOW").toUpperCase();
+    const w = Math.max(168, name.length * 8.2 + 28), h = 26, x = 14, y = 14;
     ctx.save();
     ctx.beginPath();          // angular plate, clipped top-right corner
     ctx.moveTo(x, y); ctx.lineTo(x + w - 10, y); ctx.lineTo(x + w, y + 10);
@@ -1071,6 +1159,13 @@ export function createWorldView(canvas) {
     }
     drawAmbient(t);
     const st = lastState;
+    // NPC figures on this map, drawn under RIFF
+    for (const npc of NPCS) {
+      if (npc.mapId !== st.mapId) continue;
+      if (npc.col < c0 || npc.col >= c1 || npc.row < r0 || npc.row >= r1) continue;
+      const alert = isTrainer(npc) && lastFlags && !lastFlags[trainerFlag(npc.id)];
+      drawNpc(npc.col * ts + ts / 2 - camX, npc.row * ts + ts / 2 - camY, npc, alert, t);
+    }
     drawRiff(st.col * ts + ts / 2 - camX, st.row * ts + ts / 2 - camY, st.face, t);
     drawReticle(st, t);
     drawZonePlate();
@@ -1085,11 +1180,12 @@ export function createWorldView(canvas) {
   }
   if (!loopStarted) { loopStarted = true; requestAnimationFrame(tick); }
 
-  function render(state) {
+  function render(state, flags) {
     fit();
     map = MAPS[state.mapId];
     if (!map) return;
     lastState = state;
+    lastFlags = flags || {};
     ts = TILE_SIZE;
     nRows = map.rows.length; nCols = map.rows[0].length;
     worldW = nCols * ts; worldH = nRows * ts;
