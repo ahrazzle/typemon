@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Typemon — Playable Battle Demo</title>
+<title>Typemon · Playable Battle Demo</title>
 <style>
   :root{
     --navy:#1a1a2e; --slate:#16213e; --cobalt:#0f3460; --coral:#e94560;
@@ -200,7 +200,7 @@
   </div>
   <div class="hint">
     Type the glowing key <b>in rhythm</b> to attack. Perfect hits are criticals.
-    Wrong keys dodge — they never punish you. Miss the beat and the enemy strikes!
+    Wrong keys dodge. They never punish you. Miss the beat and the enemy strikes!
     <p>Requires a physical keyboard. Explore with arrow keys or WASD; Enter interacts.</p>
   </div>
 </div>
@@ -209,7 +209,7 @@
 <div id="starterRoot">
   <h2>CHOOSE YOUR TYPEMON</h2>
   <div id="starterCards"></div>
-  <div class="hint" style="color:var(--dim);font-size:13px">Press 1, 2, or 3 — or click.</div>
+  <div class="hint" style="color:var(--dim);font-size:13px">Press 1, 2, or 3, or click.</div>
 </div>
 
 <!-- ============ OVERWORLD (walkable Route A) ============ -->
@@ -799,7 +799,7 @@ function renderMenu(){
     moves.forEach((mv, i) => add(String(i + 1), '<span class="moveName">' + mv.name + "</span>", mv.type, "m" + i));
     const canCapture = CUR.mode === "wild" && S.enemyHp > 0;
     add("4", "CAPTURE", canCapture ? "snare the wild one" : "wild battles only", "capture", !canCapture);
-    add("5", "SWITCH", "swap Typemon — costs your turn", "switch");
+    add("5", "SWITCH", "swap Typemon · costs your turn", "switch");
     add("6", "BAG", bagSummary(), "bag");
   } else if (S.menuMode === "switch"){
     G.collection.forEach((m, i) => {
@@ -822,7 +822,7 @@ function renderMenu(){
 }
 function bagSummary(){
   const n = Object.keys(ITEM_DEFS).reduce((a, id) => a + countItem(G.items, id), 0);
-  return n > 0 ? n + " item" + (n > 1 ? "s" : "") : "empty — see Gramps";
+  return n > 0 ? n + " item" + (n > 1 ? "s" : "") : "empty · see Gramps";
 }
 function closeMenu(){
   document.getElementById("menuBar").classList.remove("on");
@@ -1059,7 +1059,7 @@ const hooks = {
     if (S.phase === "battle"){ showCombo("BROKEN ×" + prev, 600); }
   },
   onStreakThreshold(count){
-    if (S.phase === "battle") showCombo("ULT READY — CAPTURE!", 1000);
+    if (S.phase === "battle") showCombo("ULT READY · CAPTURE!", 1000);
   },
 };
 /* Hide Typejoy's built-in top-left stats counter (the plugin owns the bottom counter). */
@@ -1126,7 +1126,7 @@ function enemyAttack(kind){
   setHpBars();
   const W = cv.width, H = cv.height;
   fx.spawn(W*0.62, H*0.16, "ring", -ed.dmg);   // telegraph ring at the ENEMY (attack source), not dots
-  const effNote = ed.eff === 1 ? "" : " — " + effectivenessLabel(ed.eff).toLowerCase();
+  const effNote = ed.eff === 1 ? "" : " · " + effectivenessLabel(ed.eff).toLowerCase();
   showCombo((enemy ? enemy.name : "ENEMY") + " used " + mv.name + effNote, 900);
   if (S.playerHp <= 0) resolve(false);
 }
@@ -1146,7 +1146,7 @@ function commitBattle(win){
     if (idx >= 0){
       const r = awardXp(G.collection[idx], j, true, captured);
       const next = G.collection.slice(); next[idx] = r.owned; G.collection = next;
-      extra = " +" + r.earned + " XP" + (r.leveledUp ? " — LEVEL UP to " + r.owned.level + "!" : "");
+      extra = " +" + r.earned + " XP" + (r.leveledUp ? " · LEVEL UP to " + r.owned.level + "!" : "");
     }
     if (captured) G.collection = addCapture(G.collection, MONSTERS[CUR.enemyId]);
     if (CUR.nodeId) G.route = commitNodeClear(G.route, CUR.nodeId, CUR.enemyIsBoss);
@@ -1213,7 +1213,7 @@ function resolve(win){
       ? (captured
           ? "You captured " + enemyName + "! Your rhythm tamed the beast." + extra
           : "You defeated " + enemyName + "!" + extra + " Type faster to capture it next time.")
-      : (npc ? npc.trainer.lose.join(" ") : "The enemy wore you down. Keep the beat — every dodge counts.");
+      : (npc ? npc.trainer.lose.join(" ") : "The enemy wore you down. Keep the beat, every dodge counts.");
     btn.textContent = "Return to World";
     W.againAction = null;
   }
